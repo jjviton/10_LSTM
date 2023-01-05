@@ -1,0 +1,25 @@
+WARNING:root:esto es una kkk
+DEBUG:tensorflow:Falling back to TensorFlow client; we recommended you install the Cloud TPU client directly with pip install cloud-tpu-client.
+DEBUG:h5py._conv:Creating converter from 7 to 5
+DEBUG:h5py._conv:Creating converter from 5 to 7
+DEBUG:h5py._conv:Creating converter from 7 to 5
+DEBUG:h5py._conv:Creating converter from 5 to 7
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (1): query2.finance.yahoo.com:443
+DEBUG:urllib3.connectionpool:https://query2.finance.yahoo.com:443 "GET /v8/finance/chart/ADBE?range=1d&interval=1d HTTP/1.1" 200 928
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (1): query2.finance.yahoo.com:443
+DEBUG:urllib3.connectionpool:https://query2.finance.yahoo.com:443 "GET /v8/finance/chart/ADBE?period1=1010638800&period2=1672438092&interval=1d&includePrePost=False&events=div%2Csplits HTTP/1.1" 200 None
+WARNING:root:esto es una kkk
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (1): query2.finance.yahoo.com:443
+DEBUG:urllib3.connectionpool:https://query2.finance.yahoo.com:443 "GET /v8/finance/chart/ADBE?range=1d&interval=1d HTTP/1.1" 200 928
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (1): query2.finance.yahoo.com:443
+DEBUG:urllib3.connectionpool:https://query2.finance.yahoo.com:443 "GET /v8/finance/chart/ADBE?period1=1010638800&period2=1672438137&interval=1d&includePrePost=False&events=div%2Csplits HTTP/1.1" 200 None
+WARNING:root:esto es una kkk
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (1): query2.finance.yahoo.com:443
+DEBUG:urllib3.connectionpool:https://query2.finance.yahoo.com:443 "GET /v8/finance/chart/ADBE?range=1d&interval=1d HTTP/1.1" 200 928
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (1): query2.finance.yahoo.com:443
+DEBUG:urllib3.connectionpool:https://query2.finance.yahoo.com:443 "GET /v8/finance/chart/ADBE?period1=1010638800&period2=1672438153&interval=1d&includePrePost=False&events=div%2Csplits HTTP/1.1" 200 None
+2022-12-31 17:10:04,464:WARNING:esto es una kkk
+2022-12-31 17:10:04,487:DEBUG:Starting new HTTPS connection (1): query2.finance.yahoo.com:443
+2022-12-31 17:10:04,616:DEBUG:https://query2.finance.yahoo.com:443 "GET /v8/finance/chart/ADBE?range=1d&interval=1d HTTP/1.1" 200 928
+2022-12-31 17:10:04,625:DEBUG:Starting new HTTPS connection (1): query2.finance.yahoo.com:443
+2022-12-31 17:10:04,764:DEBUG:https://query2.finance.yahoo.com:443 "GET /v8/finance/chart/ADBE?period1=1010638800&period2=1672438204&interval=1d&includePrePost=False&events=div%2Csplits HTTP/1.1" 200 None
