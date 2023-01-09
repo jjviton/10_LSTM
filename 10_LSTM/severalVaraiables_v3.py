@@ -78,7 +78,7 @@ tickers5 = ['mrl.mc']
 
 
 #VALORES DEL IBEX 
-for jjj in range(len(tickers_ibex)-2,len(tickers_ibex)):    ##tickers_sp500
+for jjj in range(0,len(tickers_nasdaq)):    ##tickers_sp500
     #### FECHAS
     #start =dt.datetime(2000,1,1)
     ##startD =dt.datetime.today() - dt.timedelta(days=5*250)    #un año tiene 250 sesiones.
@@ -87,7 +87,7 @@ for jjj in range(len(tickers_ibex)-2,len(tickers_ibex)):    ##tickers_sp500
     endD= dt.datetime.today()  - dt.timedelta(days=1)        #Quito hoy para no ver el valor al ejecutar antes del cierre
     #end = '2021-9-19'
     
-    instrumento = tickers_ibex[jjj]  ##'TEF.MC'
+    instrumento = tickers_nasdaq[jjj]  ##'TEF.MC'
     print(instrumento)
     df=mycsv.creaCSV_01(instrumento, startD, endD)
     
@@ -130,10 +130,7 @@ for jjj in range(len(tickers_ibex)-2,len(tickers_ibex)):    ##tickers_sp500
     
     
     hull_col=df.columns.get_loc("hull")
-    
-    
-    
-    
+
     
     # In[11]:
     
@@ -254,7 +251,7 @@ for jjj in range(len(tickers_ibex)-2,len(tickers_ibex)):    ##tickers_sp500
     
     
     # fit the model
-    history = model.fit(trainX, trainY, epochs=4, batch_size=16, validation_split=0.15, verbose=1) #batch=16
+    history = model.fit(trainX, trainY, epochs=14, batch_size=16, validation_split=0.15, verbose=1) #batch=16
     
     ##plt.plot(history.history['loss'], label='Training loss')
     ##plt.plot(history.history['val_loss'], label='Validation loss')
@@ -302,7 +299,7 @@ for jjj in range(len(tickers_ibex)-2,len(tickers_ibex)):    ##tickers_sp500
         plt.legend()
         
         if (pdf_flag == True):
-            plt.savefig("0_descricion.pdf")
+            plt.savefig("../docs/tmp/0_descricion.pdf")
         plt.show()
     
     # In[23]:
@@ -421,12 +418,12 @@ for jjj in range(len(tickers_ibex)-2,len(tickers_ibex)):    ##tickers_sp500
     plt.plot(muestra_gap, color='red',label='Origen Prediccion')
     plt.plot(pred_gap, color='lightgreen', label='Predicción')
     plt.title(instrumento+' predicción a '+str(n_future)+' dias' ) 
-    plt.text(0, np.amin(trainY_test) - ((np.amax(trainY_test)-np.amin(trainY_test))/3.64), 'Ultimo dia ' + str( df.index[-1]))
+    plt.text(0, np.amax(trainY_test) , 'Ultimo dia ' + str( df.index[-1]))
     #plt.text(0, (np.amin(trainY_test) - ((np.amax(trainY_test)-np.amin(trainY_test))/3.64))-0.1, 'datos'  + str(cols))
     plt.legend()
     
     if (pdf_flag == True):
-        plt.savefig(instrumento+"3.pdf")
+        plt.savefig("../docs/tmp/"+instrumento+".pdf")
     plt.show()
     
     
@@ -435,138 +432,7 @@ for jjj in range(len(tickers_ibex)-2,len(tickers_ibex)):    ##tickers_sp500
     
     # In[30]:
     
-  
-    ##########################################################################################
-    # ## Preparo los datos para la predicción final
-    """ JJ
-    
-    # In[33]:
-    trainXFinal = []
-    trainYFinal = []
-        
-    
-    #for i in range(-n_past, len(df_for_training_scaled) ):   #cambio n_past por -n_past
-    ""
-    for i in range (n_past):
-        ## en este caso Append añade un elemento que es un array de dos dimensiones.
-        trainXFinal.append( df_for_training_scaled[ i - n_past : i ,  0:df_for_training.shape[1]]) 
-    trainXFinal = np.array(trainXFinal)
-    ""    
-    
-    
-    pred_gappo = np.zeros(n_future)
-    muestra_gappo =[]
-    gappreviono=[]
-    xxx=[]
-    
-    muestreo=30  # minimo 20
 
-    gappreviono=np.zeros(0)
-    
-
-    for ii in range (len(gappreviono)):
-        gappreviono[ii] = np.nan
-
-    for ii in range (len(pred_gappo)):
-        pred_gappo[ii] = np.nan  
-    
-            ##j#prediction = model.predict(trainXFinal[-n_past:])
-    
-    predictiono = model.predict(trainX_test[-n_past:])
-    predictiono.shape = (n_past)   #me devuleve 14//n_past previsiones a 6//n_future dias vista desde la ultima referencia
-    pred_gappo=np.concatenate((pred_gappo, predictiono), axis=0)  #predcicion son n_past... en un futuro de n_futre muestras
-    ##pred_gapp=np.concatenate((pred_gapp, gapmuestras), axis=0)  #sobra?
-    
-    
-    ## MAL xx=(trainXX[-n_past:,0,hull_col]) ## Mal porque coje el primer elemento de cada uno de los tramos... parecido pero mal
-    xxx= trainX_test[-1:, -n_past:, hull_col]  # coje el ultimo tramo de datos   ##FALTA EL ULTIMO DATO!!!!!!!!!!!!!!!!!
-    xxx.shape = ( n_past)
-    muestra_gappo=np.concatenate((muestra_gappo, xxx  ), axis=0)
-    #muestra_gappo=np.concatenate((muestra_gappo, gapmuestras), axis=0)
-    
-    
-    
-    # %matplotlib widget
-    
-    # In[34]:
-    
-    
-    ##Plot
-    yy2y=trainX_test[-n_past:,-1,0]
-                #yy2y.shape = (len(df_for_training_scaled[0]) )
-    ##plt.plot(yy2y, label='curva Close',color='lightblue')
-    
-    
-    yyy=trainX_test[-(n_past+n_future):,-1,hull_col]                    ###
-    yyy.shape = ( n_past+n_future)
-    plt.plot(yyy, label='curva MEDIA (referencia)',color='pink')
-    
-    #plt.plot(muestra_gappo, color='red',label='datos origen Prediccion .. Hulk')
-    
-    plt.plot(pred_gappo, color='lightgreen', label='Predicción')
-    plt.title(instrumento) 
-    plt.legend()
-    
-    if (pdf_flag == True):
-        plt.savefig(instrumento+"2.pdf")
-
-    plt.show()
-
-    plt.title(instrumento)    
-    
-
-    
-    ##############################################
-    # ## Busco divergencia Predicción versus Actual
-    
-    # In[42]:
-    
-    
-    fd= pd.DataFrame(pred_gappo, columns =['1'])
-    
-    
-    # In[43]:
-    
-    
-    #fd.tail()
-    
-    
-    # In[44]:
-    
-    
-    #################################################### RegresionLineal()
-    fd_pred= pd.DataFrame(pred_gappo[15:(15+n_past)], columns =['1'])   # Que es el 16???
-    
-    # 1.- Calculamos media de las ultimas sesiones y la regresion lineal
-    coef_p, intercept_ =quant_j.linearRegresion_J3(fd_pred['1'],instrumento='_')
-    
-    
-    # pred_gapp[16:(16+n_past)]
-    
-    # In[45]:
-    
-    
-    #################################################### RegresionLineal()
-    fd2_sample= pd.DataFrame(muestra_gappo[0:n_past], columns =['1'])   # Que es el 16???
-    
-    # 1.- Calculamos media de las ultimas sesiones y la regresion lineal
-    coef2_s, intercept2_ =quant_j.linearRegresion_J3(fd2_sample['1'],instrumento='_')
-    
-    
-
-    
-    #### Información final
-    
-    if((coef2_s * coef_p)<0):
-        if(coef_p >0):
-            print ('==================================================//////////////////////  Invierte en ', instrumento)
-            df32 = df32.append({'instrumento': instrumento, 'divergencia':'yes', 'fecha':endD}, ignore_index=True)
-    else:
-        print(' Ese intrumento NO presenta divergencia', instrumento)
-        df32 = df32.append({'instrumento': instrumento, 'divergencia':'no', 'fecha': endD}, ignore_index=True)
-    print(df32)
-    
-    JJ"""
 
 
 print('This is it................ ')
