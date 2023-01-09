@@ -22,7 +22,6 @@ Author: J3Viton
 # J3_DEBUG__ = False  #variable global (global J3_DEBUG__ )
 
 
-
 ################################ IMPORTAMOS MODULOS A UTILIZAR.
 import pandas as pd
 import numpy as np
@@ -52,7 +51,6 @@ import quant_j3_lib as quant_j
 import generarCSV as fileCSV
 
 
-
 ####################### LOGGING
 import logging    #https://docs.python.org/3/library/logging.html
 for handler in logging.root.handlers[:]:
@@ -72,7 +70,6 @@ from ibex import tickers_ibex
 from comodity import tickers_comodities
 
 
-
 pdf_flag =True
 
 #################################################### Clase Estrategia 
@@ -84,18 +81,22 @@ class LSTMClass:
        
     """  
     
-    
-    
     #Variable de CLASE
     backtesting = False  #variable de la clase, se accede con el nombre
-
-    
-    def __init__(self, instrumento= 'IBE.MC', para1=False, para2=1):
+   
+    def __init__(self, previson_a_x_days=1, para1=False, para2=1):
         
         #Variable de INSTANCIA
         self.para_02 = para2   #variable de la isntancia
         self.instrumento =instrumento
- 
+        
+        self.trainXX = []
+        self.trainYY = []
+        self.trainX_test=[]
+        self.trainX = []
+        self.trainY = []
+
+        self.n_future=previson_a_x_days
         
         globalVar = False
         
@@ -148,36 +149,22 @@ class LSTMClass:
         # #Separate dates for future plotting
         # train_dates = pd.to_datetime(df['Date'])
         # print(train_dates.tail(5)) #Check last few dates. 
-        
-        # In[7]:
-        
-        
+  
         print (df.shape)
         
-        
-        # In[8]:
-        
+
         
         #Variables for training
         cols = list(df)[0:8]  #df.columns.tolist()
         #Date and volume columns are not used in training. 
         print(cols) #['Open', 'High', 'Low', 'Close', 'Adj Close']
         
-        
-        # In[9]:
-        
-        
+
         cols[0]
         
-        
-        # In[10]:
-        
-        
+
         hull_col=df.columns.get_loc("hull")
 
-        
-        # In[11]:
-        
         
         #New dataframe with only training data - 5 columns
         df_for_training = df[cols].astype(float)
@@ -225,11 +212,11 @@ class LSTMClass:
         #In this example, the n_features is 5. We will make timesteps = 14 (past days data used for training). 
         
         #Empty lists to be populated using formatted training data
-        trainXX = []
-        trainYY = []
-        trainX_test=[]
+        #trainXX = []
+        #trainYY = []
+        #trainX_test=[]
         
-        n_future = previson_a_x_days   # origina=1,   Number of days we want to look into the future based on the past days.
+        self.n_future = previson_a_x_days   # origina=1,   Number of days we want to look into the future based on the past days.
         n_past = 14  # Number of past days we want to use to predict the future.  FILAS
         
         
@@ -239,27 +226,27 @@ class LSTMClass:
         #Reformat input data into a shape: (n_samples x timesteps x n_features)
         #In my example, my df_for_training_scaled has a shape (12823, 5)
         #12823 refers to the number of data points and 5 refers to the columns (multi-variables).
-        for i in range(n_past, len(df_for_training_scaled) - n_future +1):
+        for i in range(n_past, len(df_for_training_scaled) - self.n_future +1):
             ## en este caso Append añade un elemento que es un array de dos dimensiones.
-            trainXX.append( df_for_training_scaled[ i - n_past : i ,  0:df_for_training.shape[1]])  #n_past filas X 5 columnas (feautures)
+            self.trainXX.append( df_for_training_scaled[ i - n_past : i ,  0:df_for_training.shape[1]])  #n_past filas X 5 columnas (feautures)
             #slicing: fila desde (i-n_past) hasta i///// Columna desde 0: 5 =>(df_for_training.shape[1])
             
-            trainYY.append(df_for_training_scaled[i + n_future - 1:i + n_future, hull_col])  ##[17:18,0] un posicoin de la fila para la columna 0
+            self.trainYY.append(df_for_training_scaled[i + self.n_future - 1:i + self.n_future, hull_col])  ##[17:18,0] un posicoin de la fila para la columna 0
             ### el 4/hull_col es la caracteritica elegida Close//EMA//EMA100//
     
         # ## separar Training y TEST
-        trainX, trainX_test, trainY, trainY_test  = train_test_split(trainXX, trainYY, test_size = 0.05,shuffle = False)
+        self.trainX, self.trainX_test, self.trainY, self.trainY_test  = train_test_split(self.trainXX, self.trainYY, test_size = 0.05,shuffle = False)
         
         
         # trainX_test[-1,-1, hull_col]
         # trainY_test[-1]
        
-        trainX, trainY = np.array(trainX), np.array(trainY)
-        trainX_test, trainY_test = np.array(trainX_test), np.array(trainY_test)
+        self.trainX, self.trainY = np.array(self.trainX), np.array(self.trainY)
+        self.trainX_test, self.trainY_test = np.array(self.trainX_test), np.array(self.trainY_test)
         
-        print('trainX shape == {}.'.format(trainX.shape))
-        print('trainY shape == {}.'.format(trainY.shape))
-        print('trainX_test shape == {}.'.format(trainX_test.shape))
+        print('trainX shape == {}.'.format(self.trainX.shape))
+        print('trainY shape == {}.'.format(self.trainY.shape))
+        print('trainX_test shape == {}.'.format(self.trainX_test.shape))
         
         """
         tenemos un array de 238 elementos en el que cada elemento es un array de 14x5
@@ -269,7 +256,7 @@ class LSTMClass:
         
         return
     
-    def LSTM_net_2 (self, trainX, trainY, parametro1, parametro2, parametro3):
+    def LSTM_net_2 (self, parametro1=1, parametro2=2, parametro3=3):
         """
         Descripcion: this method evaluates the convenience of the inversion measuring Profit and loss
         Currrent method asumes profit line three times bigger than stopLoss line
@@ -285,27 +272,27 @@ class LSTMClass:
         # define the Autoencoder model
         
         model = Sequential()
-        model.add(LSTM(256, activation='relu', input_shape=(trainX.shape[1], trainX.shape[2]), return_sequences=True)) #64
+        model.add(LSTM(256, activation='relu', input_shape=(self.trainX.shape[1], self.trainX.shape[2]), return_sequences=True)) #64
         model.add(LSTM(128, activation='relu', return_sequences=False))   #32
         model.add(Dropout(0.2))
-        model.add(Dense(trainY.shape[1]))
+        model.add(Dense(self.trainY.shape[1]))
         
         model.compile(optimizer='adam', loss='mse')
         model.summary()
 
         # fit the model
-        history = model.fit(trainX, trainY, epochs=14, batch_size=16, validation_split=0.15, verbose=1) #batch=16
+        history = model.fit(self.trainX, self.trainY, epochs=4, batch_size=16, validation_split=0.15, verbose=1) #batch=16
         
         plt.plot(history.history['loss'], label='Training loss')
         plt.plot(history.history['val_loss'], label='Validation loss')
         plt.legend()
         
         #logging.debug('Add: {} + {} = {}'.format(num_1, num_2, add_result))
-        logging.info('Loss: {}'.format(n_future))
+        logging.info('Loss: {}'.format(self.n_future))
         logging.info('mensaje 32')
         
         #Predicting...
-        prediction = model.predict(trainX[0:1])
+        prediction = model.predict(self.trainX[0:1])
         #prediction = model.predict(trainX[-n_days_for_prediction:]) #shape = (n, 1) where n is the n_days_for_prediction
                                                                     # desde -n hasta el final. Cada elemento es un array bidimensional
         #Pido una predcicion para un array de fechas, me devuelve la predicion para cada una
@@ -356,13 +343,13 @@ if __name__ == '__main__':
     """   
     print ('version: ',versionVersion) 
 
-    myLSTMnet =LSTMClass()          #Creamos la clase
+    myLSTMnet =LSTMClass(previson_a_x_days=1)          #Creamos la clase
     
     #Preparo los datos
     myLSTMnet.dataPreparation_1('BBVA')
      
     #creo y entreno la NET
-    myLSTMnet.LSTM_net_2(trainX, trainY, parametro1, parametro2, parametro3)
+    myLSTMnet.LSTM_net_2()
         
     #VALORES DEL IBEX 
     for jjj in range(0,len(tickers_nasdaq)):    ##tickers_sp500
