@@ -3,10 +3,10 @@
 
 """
 ******************************************************************************
-Clase para generar CSV con datos de Instrumentos 
+Clase que implementa una LSTM para evaluar la serie temporal de una secuencia
+ de precios y mostrar la prevision calculada.
 ******************************************************************************
 ******************************************************************************
-
 
 Mejoras:    
 
@@ -70,7 +70,7 @@ from ibex import tickers_ibex
 from comodity import tickers_comodities
 
 
-pdf_flag =True
+pdf_flag =False
 
 #################################################### Clase Estrategia 
 
@@ -109,8 +109,7 @@ class LSTMClass:
         
     def analisis(self, instrumento, startDate, endDate, DF):
         """
-        Descripcion: this method evaluates the convenience of the inversion measuring Profit and loss
-        Currrent method asumes profit line three times bigger than stopLoss line
+        Descripcion: sample method
         
         Parameters
         ----------
@@ -145,6 +144,17 @@ class LSTMClass:
     
     
     def dataPreparation_1(self, instrumento='san', fechaInicio=5, fechaFin=6):
+        """
+        Descripcion: Data preparation for LSTM training and prediction
+        
+        Parameters
+        ----------
+        beneficio : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+        """        
         
         startD = dt.datetime(2018,1,10)
         endD= dt.datetime.today()  - dt.timedelta(days=1)        #Quito hoy para no ver el valor al ejecutar antes del cierre
@@ -220,9 +230,7 @@ class LSTMClass:
         #trainX_test=[]
         
         #self.n_future = previson_a_x_days   # origina=1,   Number of days we want to look into the future based on the past days.
-  
 
-    
         #Reformat input data into a shape: (n_samples x timesteps x n_features)
         #In my example, my df_for_training_scaled has a shape (12823, 5)
         #12823 refers to the number of data points and 5 refers to the columns (multi-variables).
@@ -251,15 +259,13 @@ class LSTMClass:
         """
         tenemos un array de 238 elementos en el que cada elemento es un array de 14x5
         """
-        
-        
-        
+
         return
+
     
     def LSTM_net_2 (self, parametro1=1, parametro2=2, parametro3=3):
         """
-        Descripcion: this method evaluates the convenience of the inversion measuring Profit and loss
-        Currrent method asumes profit line three times bigger than stopLoss line
+        Descripcion: NET LSTM definition and fitting.
         
         Parameters
         ----------
@@ -281,7 +287,7 @@ class LSTMClass:
         self.model.summary()
 
         # fit the model
-        history = self.model.fit(self.trainX, self.trainY, epochs=4, batch_size=16, validation_split=0.15, verbose=1) #batch=16
+        history = self.model.fit(self.trainX, self.trainY, epochs=2, batch_size=16, validation_split=0.15, verbose=1) #batch=16
         
         plt.title("LSTM training")
         plt.plot(history.history['loss'], label='Training loss')
@@ -318,6 +324,127 @@ class LSTMClass:
         return
 
 
+    def plottingSecuence_prevision(myLSTMnet):
+        """
+        Descripcion: sample method
+        
+        Parameters
+        ----------
+        beneficio : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+
+
+        """
+            ## Pinto en un grafico los parametros del ejercico.
+        if True:
+            plt.title("Datos del ejercicio")
+            plt.text(0.1,0.6, 'Predicción a '+str(myLSTMnet.n_future)+' dias' ) 
+            plt.text(0.1, 0.2, 'Ultimo dia ' + str( myLSTMnet.dfx.index[-1]))
+            plt.text(0.1, 0.4, 'datos'  + str(myLSTMnet.cols))
+            plt.legend()
+            
+            if (pdf_flag == True):
+                plt.savefig("../docs/tmp/0_descricion.pdf")
+            plt.show()
+            
+            
+            ### VISUALIZAION DATOS TEST  (esto no son lo datos de test, TrainX_test deberia ser)
+            
+            pred_gap = np.zeros(myLSTMnet.n_future)
+            muestra_gap =[]
+            xx=[]
+            
+            muestreo=35  # minimo 20
+            gapmuestras=np.zeros(muestreo-LSTMClass.n_past)
+            gapprevion=np.zeros(myLSTMnet.n_future)
+            gappostprevison= np.zeros(muestreo-myLSTMnet.n_future-LSTMClass.n_past)
+            
+            for ii in range (len(gapmuestras)):
+                gapmuestras[ii] = np.nan
+            for ii in range (len(gapprevion)):
+                gapprevion[ii] = np.nan
+            for ii in range (len(gappostprevison)):
+                gappostprevison[ii] = np.nan 
+            for ii in range (len(pred_gap)):
+                pred_gap[ii] = np.nan      
+            
+            
+            inicio= np.zeros(myLSTMnet.n_future+LSTMClass.n_past)    
+            
+            origen=LSTMClass.n_past+myLSTMnet.n_future
+            
+            
+            for i in range(LSTMClass.n_past, len(myLSTMnet.trainX_test)-20, muestreo):  # vamos avanzando a saltos de longuitud muestreo
+                
+                prediction = myLSTMnet.model.predict(myLSTMnet.trainX_test[i-LSTMClass.n_past:i])
+                prediction.shape = (LSTMClass.n_past)   #me devuleve 15//n_past previsiones a 6//n_future dias vista
+                pred_gap=np.concatenate((pred_gap, prediction), axis=0)  #predcicion son n_past... en un futuro de n_futre muestras
+                pred_gap=np.concatenate((pred_gap, gapmuestras), axis=0)
+            
+                ##xx=(trainX[i-n_past:i,0,hull_col])
+                xx=(myLSTMnet.trainX_test[i-LSTMClass.n_past:i,-1,myLSTMnet.hull_col])    ##yyy=trainX_test[-(n_past+n_future):,-1,hull_col]   
+                
+                ##xx= trainXX[-1:, -n_past:, hull_col]  # coje el ultimo tramo de datos 
+                xx.shape = ( LSTMClass.n_past)
+                
+                muestra_gap=np.concatenate((muestra_gap, xx  ), axis=0)
+                muestra_gap=np.concatenate((muestra_gap, gapmuestras), axis=0)
+            
+                #print(trainX[i:i+n_days_for_prediction])
+                ##print(xx)
+                #fake =input()
+        
+        
+            # Ahora ultimos datos, me reserve 20 en el for de arriba
+            try: 
+                #falta empujar la curva a su sitio en la parte final de la curva.
+                prediction = myLSTMnet.model.predict(myLSTMnet.trainX_test[-LSTMClass.n_past:])
+                prediction.shape = (LSTMClass.n_past)   #me devuleve 15//n_past previsiones a 6//n_future dias vista
+            except:
+                logging.info('Error en la cantidad de los datos de test')
+                
+                #continue  #pondría un break para salir del todo del bucle for, continue ten lleva la sigueitne iteracion
+            finally:
+                logging.info('se ejecuta siempre... try')
+            
+         
+            ##des Scaler
+            """
+            prediction_copies = np.repeat(prediction, df_for_training.shape[1], axis=0)
+            predd= prediction_copies.reshape(14,8)
+            y_pred_future = scaler.inverse_transform(predd)[:,0]
+            del prediction
+            prediction=y_pred_future
+            """
+            
+            ## Preparo las graficas 
+            pred_gap=np.concatenate((pred_gap, gapmuestras[0:5]), axis=0)
+            pred_gap=np.concatenate((pred_gap, prediction), axis=0)  #predcicion son n_past... en un futuro de n_futre muestras
+            pred_gap=np.concatenate((pred_gap, gapmuestras), axis=0)
+           
+            yyy=myLSTMnet.trainX_test[0:(len(myLSTMnet.trainX_test)-6),-1,myLSTMnet.hull_col]        ## yyy=trainXX[-1:,-n_past:,hull_col]   de todos los grupos de 14 observaciones, cojo la primero y la column 'hull' 
+            plt.plot(yyy, label='datos REALES',color='pink')
+            
+            plt.plot(muestra_gap, color='red',label='Origen Prediccion')
+            plt.plot(pred_gap, color='lightgreen', label='Predicción')
+            plt.title(myLSTMnet.instrumento+' predicción a '+str(myLSTMnet.n_future)+' dias' ) 
+            plt.text(0, np.amax(myLSTMnet.trainY_test) , 'Ultimo dia ' + str( myLSTMnet.dfx.index[-1]))
+            #plt.text(0, (np.amin(trainY_test) - ((np.amax(trainY_test)-np.amin(trainY_test))/3.64))-0.1, 'datos'  + str(cols))
+            plt.legend()
+            
+            if (pdf_flag == True):
+                plt.savefig("../docs/tmp/"+myLSTMnet.instrumento+".pdf")
+            plt.show()
+
+
+
+
+
+   
+        return
 
     
 #################################################### Clase FIN
@@ -360,7 +487,9 @@ if __name__ == '__main__':
     #creo y entreno la NET
     myLSTMnet_12.LSTM_net_2()
 
-
+    # Pinto la grafica
+    LSTMClass.plottingSecuence_prevision(myLSTMnet_1)
+    LSTMClass.plottingSecuence_prevision(myLSTMnet_12)
        
     #VALORES DEL IBEX 
 
@@ -371,105 +500,7 @@ if __name__ == '__main__':
                 
         
 
-        ## Pinto en un grafico los parametros del ejercico.
-    if True:
-        plt.title("Datos del ejercicio")
-        plt.text(0.1,0.6, 'Predicción a '+str(myLSTMnet_1.n_future)+' dias' ) 
-        plt.text(0.1, 0.2, 'Ultimo dia ' + str( myLSTMnet_1.dfx.index[-1]))
-        plt.text(0.1, 0.4, 'datos'  + str(myLSTMnet_1.cols))
-        plt.legend()
-        
-        if (pdf_flag == True):
-            plt.savefig("../docs/tmp/0_descricion.pdf")
-        plt.show()
-        
-        
-        ### VISUALIZAION DATOS TEST  (esto no son lo datos de test, TrainX_test deberia ser)
-        
-        pred_gap = np.zeros(myLSTMnet_1.n_future)
-        muestra_gap =[]
-        xx=[]
-        
-        muestreo=35  # minimo 20
-        gapmuestras=np.zeros(muestreo-LSTMClass.n_past)
-        gapprevion=np.zeros(myLSTMnet_1.n_future)
-        gappostprevison= np.zeros(muestreo-myLSTMnet_1.n_future-LSTMClass.n_past)
-        
-        for ii in range (len(gapmuestras)):
-            gapmuestras[ii] = np.nan
-        for ii in range (len(gapprevion)):
-            gapprevion[ii] = np.nan
-        for ii in range (len(gappostprevison)):
-            gappostprevison[ii] = np.nan 
-        for ii in range (len(pred_gap)):
-            pred_gap[ii] = np.nan      
-        
-        
-        inicio= np.zeros(myLSTMnet_1.n_future+LSTMClass.n_past)    
-        
-        origen=LSTMClass.n_past+myLSTMnet_1.n_future
-        
-        
-        for i in range(LSTMClass.n_past, len(myLSTMnet_1.trainX_test)-20, muestreo):  # vamos avanzando a saltos de longuitud muestreo
-            
-            prediction = myLSTMnet_1.model.predict(myLSTMnet_1.trainX_test[i-LSTMClass.n_past:i])
-            prediction.shape = (LSTMClass.n_past)   #me devuleve 15//n_past previsiones a 6//n_future dias vista
-            pred_gap=np.concatenate((pred_gap, prediction), axis=0)  #predcicion son n_past... en un futuro de n_futre muestras
-            pred_gap=np.concatenate((pred_gap, gapmuestras), axis=0)
-        
-            ##xx=(trainX[i-n_past:i,0,hull_col])
-            xx=(myLSTMnet_1.trainX_test[i-LSTMClass.n_past:i,-1,myLSTMnet_1.hull_col])    ##yyy=trainX_test[-(n_past+n_future):,-1,hull_col]   
-            
-            ##xx= trainXX[-1:, -n_past:, hull_col]  # coje el ultimo tramo de datos 
-            xx.shape = ( LSTMClass.n_past)
-            
-            muestra_gap=np.concatenate((muestra_gap, xx  ), axis=0)
-            muestra_gap=np.concatenate((muestra_gap, gapmuestras), axis=0)
-        
-            #print(trainX[i:i+n_days_for_prediction])
-            ##print(xx)
-            #fake =input()
-    
-    
-        # Ahora ultimos datos, me reserve 20 en el for de arriba
-        try: 
-            prediction = myLSTMnet_1.model.predict(myLSTMnet_1.trainX_test[-LSTMClass.n_past:])
-            prediction.shape = (LSTMClass.n_past)   #me devuleve 15//n_past previsiones a 6//n_future dias vista
-        except:
-            logging.debug('Error en la cantidad de los datos de test')
-            
-            #continue  #pondría un break para salir del todo del bucle for, continue ten lleva la sigueitne iteracion
-        finally:
-            logging.info('se ejecuta siempre... try')
-        
-     
-        ##des Scaler
-        """
-        prediction_copies = np.repeat(prediction, df_for_training.shape[1], axis=0)
-        predd= prediction_copies.reshape(14,8)
-        y_pred_future = scaler.inverse_transform(predd)[:,0]
-        del prediction
-        prediction=y_pred_future
-        """
-        
-        ## Preparo las graficas 
-        pred_gap=np.concatenate((pred_gap, gapmuestras[0:5]), axis=0)
-        pred_gap=np.concatenate((pred_gap, prediction), axis=0)  #predcicion son n_past... en un futuro de n_futre muestras
-        pred_gap=np.concatenate((pred_gap, gapmuestras), axis=0)
-       
-        yyy=myLSTMnet_1.trainX_test[0:(len(myLSTMnet_1.trainX_test)-6),-1,myLSTMnet_1.hull_col]        ## yyy=trainXX[-1:,-n_past:,hull_col]   de todos los grupos de 14 observaciones, cojo la primero y la column 'hull' 
-        plt.plot(yyy, label='datos REALES',color='pink')
-        
-        plt.plot(muestra_gap, color='red',label='Origen Prediccion')
-        plt.plot(pred_gap, color='lightgreen', label='Predicción')
-        plt.title(myLSTMnet_1.instrumento+' predicción a '+str(myLSTMnet_1.n_future)+' dias' ) 
-        plt.text(0, np.amax(myLSTMnet_1.trainY_test) , 'Ultimo dia ' + str( myLSTMnet_1.dfx.index[-1]))
-        #plt.text(0, (np.amin(trainY_test) - ((np.amax(trainY_test)-np.amin(trainY_test))/3.64))-0.1, 'datos'  + str(cols))
-        plt.legend()
-        
-        if (pdf_flag == True):
-            plt.savefig("../docs/tmp/"+myLSTMnet_1.instrumento+".pdf")
-        plt.show()
+
             
         #break
     
