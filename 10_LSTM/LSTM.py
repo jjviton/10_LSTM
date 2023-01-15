@@ -60,7 +60,7 @@ logging.basicConfig(filename='../log/registro.log', level=logging.INFO ,force=Tr
 logging.warning('esto es una kkk')
 
 #### Variables globales  (refereniarlas con 'global' desde el codigo
-versionVersion = 1
+versionVersion = 1.1
 globalVar  = True
 
 ###################### DATOS
@@ -70,7 +70,7 @@ from ibex import tickers_ibex
 from comodity import tickers_comodities
 
 
-pdf_flag =False
+pdf_flag =True
 
 #################################################### Clase Estrategia 
 
@@ -84,6 +84,7 @@ class LSTMClass:
     #Variable de CLASE
     backtesting = False  #variable de la clase, se accede con el nombre
     n_past = 14  # Number of past days we want to use to predict the future.  FILAS
+    flag01 =0
    
     def __init__(self, previson_a_x_days=1, para1=False, para2=1):
         
@@ -102,7 +103,8 @@ class LSTMClass:
 
         self.n_future=previson_a_x_days
         
-        globalVar = False
+        globalVar = True
+        LSTMClass.flag01 =True
         
         return
     
@@ -184,21 +186,18 @@ class LSTMClass:
   
         print (self.dfx.shape)
         
-
-        
         #Variables for training
         self.cols = list(self.dfx)[0:8]  #df.columns.tolist()
         #Date and volume columns are not used in training. 
         print(self.cols) #['Open', 'High', 'Low', 'Close', 'Adj Close']
 
-
         self.hull_col=self.dfx.columns.get_loc("hull")
-
         
         #New dataframe with only training data - 5 columns
-        df_for_training = self.dfx[self.cols].astype(float)
+        df_for_training=self.dfx[self.cols].astype(float)
+        #df_for_training_scaled_pre= self.dfx[self.cols].astype(float)
         
-        df_for_plot=df_for_training.tail(500)
+        #df_for_plot=df_for_training.tail(500)
         ##j df_for_plot.plot.line()
         
         ### ESTUDIA como funciona este tema del scaler... deberia ser entre 0 y 1, no?
@@ -206,15 +205,19 @@ class LSTMClass:
         #LSTM uses sigmoid and tanh that are sensitive to magnitude so values need to be normalized
         # normalize the dataset
         #Estándariza los datos eliminando la media y escalando los datos de forma que su varianza sea igual a 1.
-        
+   
         scaler = StandardScaler()
         scaler = scaler.fit(df_for_training)
-        df_for_training_scaled = scaler.transform(df_for_training)
-        df_for_training_scaled
+        df_for_training_scaled_pre = scaler.transform(df_for_training)
         
-       
-        df_for_training_scaled.shape
-        
+         
+        #Divido antes de prepararlos para no perder los  ultimos datos de test al hacer la preparacion supervidada
+        #p_train = 0.80 # Porcentaje de train.
+        #df_for_training_scaled = df_for_training_scaled_pre[:int((len(df_for_training_scaled_pre))*p_train)] 
+        #df_for_training_scaled_test = df_for_training_scaled_pre[int((len(df_for_training_scaled_pre))*p_train):]
+        df_for_training_scaled = df_for_training_scaled_pre[:] 
+        df_for_training_scaled_test = df_for_training_scaled_pre[int(-250):]
+   
         
         # df_data = pd.DataFrame(df_for_training_scaled ,columns = ['close','hull','50','100','30'])
         # df_data.to_excel("telefonica_scaled.xlsx", 
@@ -241,9 +244,21 @@ class LSTMClass:
             
             self.trainYY.append(df_for_training_scaled[i + self.n_future - 1:i + self.n_future, self.hull_col])  ##[17:18,0] un posicoin de la fila para la columna 0
             ### el 4/hull_col es la caracteritica elegida Close//EMA//EMA100//
-    
+            
+        for i in range (LSTMClass.n_past, len(df_for_training_scaled_test) +1):
+            ## en este caso Append añade un elemento que es un array de dos dimensiones.
+            self.trainX_test.append( df_for_training_scaled_test[ i - LSTMClass.n_past : i ,  0:df_for_training.shape[1]])  #n_past filas X 5 columnas (feautures)
+            #slicing: fila desde (i-n_past) hasta i///// Columna desde 0: 5 =>(df_for_training.shape[1])
+            
+        """
+        #Guardo ahora los datos para el test final, llegando hasta la ultima fecha. EN el for de arriba pierdo el final
+        for i in range (LSTMClass.n_past, len(df_for_training_scaled_test) +1):
+            ## en este caso Append añade un elemento que es un array de dos dimensiones.
+            self.trainX_test( df_for_training_scaled_test[ i - LSTMClass.n_past : i ,  0:df_for_training.shape[1]])  #n_past filas X 5 columnas (feautures)
+            #slicing: fila desde (i-n_past) hasta i///// Columna desde 0: 5 =>(df_for_training.shape[1])
+        """
         # ## separar Training y TEST
-        self.trainX, self.trainX_test, self.trainY, self.trainY_test  = train_test_split(self.trainXX, self.trainYY, test_size = 0.05,shuffle = False)
+        self.trainX, trainX_test_kk, self.trainY, self.trainY_test  = train_test_split(self.trainXX, self.trainYY, test_size = 0.001,shuffle = False)
         
         
         # trainX_test[-1,-1, hull_col]
@@ -287,14 +302,15 @@ class LSTMClass:
         self.model.summary()
 
         # fit the model
-        history = self.model.fit(self.trainX, self.trainY, epochs=2, batch_size=16, validation_split=0.15, verbose=1) #batch=16
+        history = self.model.fit(self.trainX, self.trainY, epochs=12, batch_size=16, validation_split=0.15, verbose=1) #batch=16
         
+        """
         plt.title("LSTM training")
         plt.plot(history.history['loss'], label='Training loss')
         plt.plot(history.history['val_loss'], label='Validation loss')
         plt.legend()
         plt.show()
-        
+        """
         
         #logging.debug('Add: {} + {} = {}'.format(num_1, num_2, add_result))
         logging.info('Loss: {}'.format(self.n_future))
@@ -335,19 +351,22 @@ class LSTMClass:
 
         Returns
         -------
-
+        
+        
 
         """
+
             ## Pinto en un grafico los parametros del ejercico.
         if True:
             plt.title("Datos del ejercicio")
-            plt.text(0.1,0.6, 'Predicción a '+str(myLSTMnet.n_future)+' dias' ) 
+            #plt.text(0.1,0.6, 'Predicción a '+str(myLSTMnet.n_future)+' dias' ) 
             plt.text(0.1, 0.2, 'Ultimo dia ' + str( myLSTMnet.dfx.index[-1]))
             plt.text(0.1, 0.4, 'datos'  + str(myLSTMnet.cols))
             plt.legend()
             
-            if (pdf_flag == True):
-                plt.savefig("../docs/tmp/0_descricion.pdf")
+            if ((pdf_flag == True) and (LSTMClass.flag01)):
+                LSTMClass.flag01=False
+                plt.savefig("../docs/temp/0_descricion.pdf")
             plt.show()
             
             
@@ -386,10 +405,8 @@ class LSTMClass:
             
                 ##xx=(trainX[i-n_past:i,0,hull_col])
                 xx=(myLSTMnet.trainX_test[i-LSTMClass.n_past:i,-1,myLSTMnet.hull_col])    ##yyy=trainX_test[-(n_past+n_future):,-1,hull_col]   
-                
                 ##xx= trainXX[-1:, -n_past:, hull_col]  # coje el ultimo tramo de datos 
                 xx.shape = ( LSTMClass.n_past)
-                
                 muestra_gap=np.concatenate((muestra_gap, xx  ), axis=0)
                 muestra_gap=np.concatenate((muestra_gap, gapmuestras), axis=0)
             
@@ -397,7 +414,7 @@ class LSTMClass:
                 ##print(xx)
                 #fake =input()
         
-        
+            ###################################################################
             # Ahora ultimos datos, me reserve 20 en el for de arriba
             try: 
                 #falta empujar la curva a su sitio en la parte final de la curva.
@@ -409,8 +426,14 @@ class LSTMClass:
                 #continue  #pondría un break para salir del todo del bucle for, continue ten lleva la sigueitne iteracion
             finally:
                 logging.info('se ejecuta siempre... try')
+                
+            #relleno hasta el final
+            arr_x =np.zeros(len(myLSTMnet.trainX_test)-len(pred_gap)-LSTMClass.n_past+myLSTMnet.n_future )
+            for ii in range (len(arr_x)):
+                arr_x[ii] = np.nan    
+            pred_gap=np.concatenate((pred_gap,arr_x),axis=0)
+            pred_gap=np.concatenate((pred_gap, prediction), axis=0) 
             
-         
             ##des Scaler
             """
             prediction_copies = np.repeat(prediction, df_for_training.shape[1], axis=0)
@@ -421,11 +444,12 @@ class LSTMClass:
             """
             
             ## Preparo las graficas 
-            pred_gap=np.concatenate((pred_gap, gapmuestras[0:5]), axis=0)
-            pred_gap=np.concatenate((pred_gap, prediction), axis=0)  #predcicion son n_past... en un futuro de n_futre muestras
-            pred_gap=np.concatenate((pred_gap, gapmuestras), axis=0)
+            #pred_gap=np.concatenate((pred_gap, gapmuestras[0:5]), axis=0)
+            #pred_gap=np.concatenate((pred_gap, prediction), axis=0)  #predcicion son n_past... en un futuro de n_futre muestras
+            #pred_gap=np.concatenate((pred_gap, gapmuestras), axis=0)
            
-            yyy=myLSTMnet.trainX_test[0:(len(myLSTMnet.trainX_test)-6),-1,myLSTMnet.hull_col]        ## yyy=trainXX[-1:,-n_past:,hull_col]   de todos los grupos de 14 observaciones, cojo la primero y la column 'hull' 
+            #yyy=myLSTMnet.trainX_test[0:(len(myLSTMnet.trainX_test)),-1,myLSTMnet.hull_col]        ## yyy=trainXX[-1:,-n_past:,hull_col]   de todos los grupos de 14 observaciones, cojo la primero y la column 'hull' 
+            yyy=myLSTMnet.trainX_test[0:,-1,myLSTMnet.hull_col]   
             plt.plot(yyy, label='datos REALES',color='pink')
             
             plt.plot(muestra_gap, color='red',label='Origen Prediccion')
@@ -436,7 +460,7 @@ class LSTMClass:
             plt.legend()
             
             if (pdf_flag == True):
-                plt.savefig("../docs/tmp/"+myLSTMnet.instrumento+".pdf")
+                plt.savefig("../docs/temp/"+myLSTMnet.instrumento+str(myLSTMnet.n_future)+".pdf")
             plt.show()
 
 
@@ -473,36 +497,35 @@ if __name__ == '__main__':
     """   
     print ('version: ',versionVersion) 
 
-    ## Primera RED
-    myLSTMnet_1 =LSTMClass(previson_a_x_days=1)          #Creamos la clase
-    #Preparo los datos
-    myLSTMnet_1.dataPreparation_1('BBVA')
-    #creo y entreno la NET
-    myLSTMnet_1.LSTM_net_2()
- 
-    ## Segunda RED
-    myLSTMnet_12 =LSTMClass(previson_a_x_days=12)          #Creamos la clase
-    #Preparo los datos
-    myLSTMnet_12.dataPreparation_1('BBVA')
-    #creo y entreno la NET
-    myLSTMnet_12.LSTM_net_2()
 
-    # Pinto la grafica
-    LSTMClass.plottingSecuence_prevision(myLSTMnet_1)
-    LSTMClass.plottingSecuence_prevision(myLSTMnet_12)
-       
     #VALORES DEL IBEX 
 
-    #for jjj in range(0,len(tickers_nasdaq)):    ##tickers_sp500
+    for jjj in range(0,len(tickers_ibex)):    ##tickers_sp500
+    
+        ## Primera RED
+        myLSTMnet_1 =LSTMClass(previson_a_x_days=1)          #Creamos la clase
+        #Preparo los datos
+        myLSTMnet_1.dataPreparation_1(tickers_ibex[jjj])
+        #creo y entreno la NET
+        myLSTMnet_1.LSTM_net_2()
+     
+        
+        ## Segunda RED
+        myLSTMnet_12 =LSTMClass(previson_a_x_days=12)          #Creamos la clase
+        #Preparo los datos
+        myLSTMnet_12.dataPreparation_1(tickers_ibex[jjj])
+        #creo y entreno la NET
+        myLSTMnet_12.LSTM_net_2()
+        
+        # Pinto la grafica
+        LSTMClass.plottingSecuence_prevision(myLSTMnet_1)
+        LSTMClass.plottingSecuence_prevision(myLSTMnet_12)
+       
         #### FECHAS
         #start =dt.datetime(2000,1,1)
         ##startD =dt.datetime.today() - dt.timedelta(days=5*250)    #un año tiene 250 sesiones.
-                
-        
-
-
-            
-        #break
+    
+        #break  #solo hago una iteracion :-)
     
     print('This is it................ ')
     
