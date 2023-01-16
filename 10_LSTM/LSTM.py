@@ -74,6 +74,8 @@ pdf_flag =True
 
 #################################################### Clase Estrategia 
 
+
+
 class LSTMClass:
 
     """CLASE ESTRATEGIA
@@ -194,6 +196,7 @@ class LSTMClass:
         self.hull_col=self.dfx.columns.get_loc("hull")
         
         #New dataframe with only training data - 5 columns
+        global df_for_training
         df_for_training=self.dfx[self.cols].astype(float)
         #df_for_training_scaled_pre= self.dfx[self.cols].astype(float)
         
@@ -206,6 +209,7 @@ class LSTMClass:
         # normalize the dataset
         #Estándariza los datos eliminando la media y escalando los datos de forma que su varianza sea igual a 1.
    
+        global scaler 
         scaler = StandardScaler()
         scaler = scaler.fit(df_for_training)
         df_for_training_scaled_pre = scaler.transform(df_for_training)
@@ -302,7 +306,7 @@ class LSTMClass:
         self.model.summary()
 
         # fit the model
-        history = self.model.fit(self.trainX, self.trainY, epochs=12, batch_size=16, validation_split=0.15, verbose=1) #batch=16
+        history = self.model.fit(self.trainX, self.trainY, epochs=2, batch_size=16, validation_split=0.15, verbose=1) #batch=16
         
         """
         plt.title("LSTM training")
@@ -399,6 +403,14 @@ class LSTMClass:
             for i in range(LSTMClass.n_past, len(myLSTMnet.trainX_test)-20, muestreo):  # vamos avanzando a saltos de longuitud muestreo
                 
                 prediction = myLSTMnet.model.predict(myLSTMnet.trainX_test[i-LSTMClass.n_past:i])
+                
+                #Perform inverse transformation to rescale back to original range
+                #Since we used 5 variables for transform, the inverse expects same dimensions
+                #Therefore, let us copy our values 5 times and discard them after inverse transform
+                prediction_copies = np.repeat(prediction, 8, axis=-1)   #df_for_training.shape[1]
+                y_prediction = scaler.inverse_transform(prediction_copies)[:,myLSTMnet.hull_col]
+                                
+                
                 prediction.shape = (LSTMClass.n_past)   #me devuleve 15//n_past previsiones a 6//n_future dias vista
                 pred_gap=np.concatenate((pred_gap, prediction), axis=0)  #predcicion son n_past... en un futuro de n_futre muestras
                 pred_gap=np.concatenate((pred_gap, gapmuestras), axis=0)
@@ -463,10 +475,6 @@ class LSTMClass:
                 plt.savefig("../docs/temp/"+myLSTMnet.instrumento+str(myLSTMnet.n_future)+".pdf")
             plt.show()
 
-
-
-
-
    
         return
 
@@ -525,7 +533,7 @@ if __name__ == '__main__':
         #start =dt.datetime(2000,1,1)
         ##startD =dt.datetime.today() - dt.timedelta(days=5*250)    #un año tiene 250 sesiones.
     
-        #break  #solo hago una iteracion :-)
+        break  #solo hago una iteracion :-)
     
     print('This is it................ ')
     
