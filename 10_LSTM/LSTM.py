@@ -147,7 +147,7 @@ class LSTMClass:
         return
     
     
-    def dataPreparation_1(self, instrumento='san', fechaInicio=5, fechaFin=6):
+    def dataPreparation_1(self, instrumento='san', startD=5, endD=6):
         """
         Descripcion: Data preparation for LSTM training and prediction
         
@@ -160,8 +160,8 @@ class LSTMClass:
         -------
         """        
         
-        startD = dt.datetime(2018,1,10)
-        endD= dt.datetime.today()  - dt.timedelta(days=1)        #Quito hoy para no ver el valor al ejecutar antes del cierre
+        #startD = dt.datetime(2018,1,10)
+        #endD= dt.datetime.today()  - dt.timedelta(days=1)        #Quito hoy para no ver el valor al ejecutar antes del cierre
         #end = '2021-9-19'
         
         #instrumento = tickers_nasdaq[jjj]  ##'TEF.MC'
@@ -317,8 +317,7 @@ class LSTMClass:
         """
         
         #logging.debug('Add: {} + {} = {}'.format(num_1, num_2, add_result))
-        logging.info('Loss: {}'.format(self.n_future))
-        logging.info('mensaje 32')
+        logging.info('Loss: {}'.format(self.n_future))      
         
         #Predicting...
         prediction = self.model.predict(self.trainX[0:1])
@@ -504,7 +503,9 @@ class LSTMClass:
 #/******************************** FUNCION PRINCIPAL main() *********/
 #     def main():   
 if __name__ == '__main__':    
+        
     """Esta parte del codigo se ejecuta cuando llamo tipo EXE
+    Abajo tenemos el else: librería que es cuando se ejecuta como libreria.
         
     Parámetros:
     a -- 
@@ -521,14 +522,18 @@ if __name__ == '__main__':
     print ('version: ',versionVersion) 
 
 
-    #VALORES DEL IBEX 
+    # Determino las fechas
+    fechaInicio_ = dt.datetime(2018,1,10)
+    fechaFin_ = dt.datetime.today()  - dt.timedelta(days=1)      
 
-    for jjj in range(0,len(tickers_sp500)):    ##tickers_sp500
+    
+
+    for jjj in range(0,len(tickers_ibex)):    ##tickers_sp500
     
         ## Primera RED
         myLSTMnet_1 =LSTMClass(previson_a_x_days=2)          #Creamos la clase
         #Preparo los datos
-        myLSTMnet_1.dataPreparation_1(tickers_sp500[jjj])
+        myLSTMnet_1.dataPreparation_1(tickers_ibex[jjj],fechaInicio_, fechaFin_)
         #creo y entreno la NET
         myLSTMnet_1.LSTM_net_2()
         
@@ -536,7 +541,7 @@ if __name__ == '__main__':
         ## Segunda RED
         myLSTMnet_5 =LSTMClass(previson_a_x_days=5)          #Creamos la clase
         #Preparo los datos
-        myLSTMnet_5.dataPreparation_1(tickers_sp500[jjj])
+        myLSTMnet_5.dataPreparation_1(tickers_ibex[jjj],fechaInicio_, fechaFin_)
         #creo y entreno la NET
         myLSTMnet_5.LSTM_net_2()
      
@@ -544,7 +549,7 @@ if __name__ == '__main__':
         ## Tercera RED
         myLSTMnet_12 =LSTMClass(previson_a_x_days=12)          #Creamos la clase
         #Preparo los datos
-        myLSTMnet_12.dataPreparation_1(tickers_sp500[jjj])
+        myLSTMnet_12.dataPreparation_1(tickers_ibex[jjj],fechaInicio_, fechaFin_)
         #creo y entreno la NET
         myLSTMnet_12.LSTM_net_2()
         
@@ -562,8 +567,36 @@ if __name__ == '__main__':
     print('This is it................ ')
     
     
-    
+    """
+    Entrada por la librería.
+    """
 else:
-    """Esta parte del codigo se ejecuta si uso como libreria"""    
+    """
+    Esta parte del codigo se ejecuta si uso como libreria/paquete""    
+    """    
     print ('formato libreria')
     print ('version: ',versionVersion)    
+    
+    # Determino las fechas
+    fechaInicio_ = dt.datetime(2018,1,10)
+    fechaFin_ = dt.datetime.today()  - dt.timedelta(days=1)      
+
+    # Determino el insturmento
+    instrumento_ = tickers_ibex[0]
+    
+    # Creo la RedNeuronal
+    myLSTMnet_1 =LSTMClass(previson_a_x_days=2)          #Creamos la clase
+    #Preparo los datos
+    myLSTMnet_1.dataPreparation_1(instrumento= instrumento_, startD=fechaInicio_, endD=fechaFin_)
+    #Entreno la NET
+    myLSTMnet_1.LSTM_net_2()
+      
+    LSTMClass.plottingSecuence_prevision(myLSTMnet_1)
+   
+    
+    
+    # Entreno la red
+    
+    # Lanzo la prediccion
+    
+    
