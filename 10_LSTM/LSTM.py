@@ -135,6 +135,8 @@ class LSTMClass:
     def estrategia_LSTM_01(self, instrumento_, startDate_, endDate_):
         """
         Descripcion: parto de los datos de reales y las predicciones de la LSTM, y defino una estrategia.
+        Atencion que desplazo en array de previsiones para que coincida el una misma vertical el valor real con la prevision
+        
         
         Parameters
         ----------
@@ -146,19 +148,37 @@ class LSTMClass:
 
         """
         ##  RED
-
         #Preparo los datos
         self.dataPreparation_1(instrumento_,startDate_, endDate_)
         #creo y entreno la NET
         self.LSTM_net_2()
-     
         # Pinto la grafica
-        #self.plottingSecuence_prevision(self)
-        
+        #self.plottingSecuence_prevision(self)        
         df_predi= self.predicionLSTM(instrumento_)
+        df_gap= df1 = pd.DataFrame(columns=['X_dias'],index=range(self.n_future )) #Gap por los dias a prevision vista
+        df_predi= pd.concat([df_gap,df_predi], axis=0,ignore_index=True)
+
+        
+        ## Graficar ....................................
         
         print (fechaFin_)
         print ('Prevision a  ', self.n_future)
+        
+        x = pd.DataFrame({'Números': range(1,1000)})
+
+        plt.plot(x[:200],df_predi[-200:], color='red',label='Prediccion')
+        #plt.plot(self.trainX_test[-200:,-1,self.hull_col], color='blue',label='Origen Prediccion')
+        df_aux9 =df_for_training['hull'].copy()
+        df_aux9=df_aux9.reset_index(drop=True)  #quito los index
+        df_aux9= pd.concat([df_aux9,df_gap], axis=0,ignore_index=True)
+        
+        plt.plot(x[:200],df_aux9[-200:], color='lightblue',label='Origen PPrediccion')
+        plt.title(instrumento_ +" PREVISIONES a  "+ str(self.n_future) + ' dias. Con desplazam')
+        plt.legend()
+        plt.show()
+        
+        
+        
    
         return    
     
@@ -178,7 +198,7 @@ class LSTMClass:
         ###################################################################
         #self.trainX_test   # Aquí guarde 250 ultimos datos +- un año
         iii=0
-        comienzo_=len(self.trainX_test) - 230
+        comienzo_=len(self.trainX_test) - 200
         for i in range(comienzo_, len(self.trainX_test), 1):  # vamos avanzando a saltos de longuitud muestreo
             
             prediction = self.model.predict(self.trainX_test[i:i+1])
@@ -578,24 +598,24 @@ if __name__ == '__main__':
     
     
     #################### PROBAMOS LA ESTRATEGIA
-    myLSTMnet_6D =LSTMClass(6)          #Creamos la clase
-    myLSTMnet_6D.estrategia_LSTM_01( tickers_ibex[6], fechaInicio_, fechaFin_)
+    myLSTMnet_6D =LSTMClass(10)          #Creamos la clase
+    myLSTMnet_6D.estrategia_LSTM_01( tickers_ibex[12], fechaInicio_, fechaFin_)
     
     
-    
-
+     
+    """
     
 
     for jjj in range(0,len(tickers_ibex)):    ##tickers_sp500
 
-        """    
+        ""   
         ## Primera RED
         myLSTMnet_2 =LSTMClass(previson_a_x_days=2)          #Creamos la clase
         #Preparo los datos
         myLSTMnet_2.dataPreparation_1(tickers_ibex[jjj],fechaInicio_, fechaFin_)
         #creo y entreno la NET
         myLSTMnet_2.LSTM_net_2()
-        """
+        "
         
         ## Segunda RED
         myLSTMnet_5 =LSTMClass(previson_a_x_days=5)          #Creamos la clase
@@ -604,14 +624,14 @@ if __name__ == '__main__':
         #creo y entreno la NET
         myLSTMnet_5.LSTM_net_2()
      
-        """
+        ""
         ## Tercera RED
         myLSTMnet_12 =LSTMClass(previson_a_x_days=12)          #Creamos la clase
         #Preparo los datos
         myLSTMnet_12.dataPreparation_1(tickers_ibex[jjj],fechaInicio_, fechaFin_)
         #creo y entreno la NET
         myLSTMnet_12.LSTM_net_2()
-        """
+        "
         
         # Pinto la grafica
         #LSTMClass.plottingSecuence_prevision(myLSTMnet_2)
@@ -625,7 +645,7 @@ if __name__ == '__main__':
         break  #solo hago una iteracion :-)
     
     print('This is it................ ')
-    
+    """
     
     """
     Entrada por la librería.
