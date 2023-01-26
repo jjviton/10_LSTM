@@ -105,6 +105,9 @@ class LSTMClass:
 
         self.n_future=previson_a_x_days
         
+        self.df_previsiones_xd = pd.DataFrame(columns=['X_dias'])
+        
+        
         globalVar = True
         LSTMClass.flag01 =True
         
@@ -129,9 +132,11 @@ class LSTMClass:
    
         return
     
-    def predicionLSTM(self, instrumento, startDate, endDate, DF):
+    def predicionLSTM(self, instrumento, myLSTMnet):
         """
         Descripcion: Metodo para calcular una prediccion con la red entrenada
+        Voy a usar para probar a estrategia los datos del ultimo año. 
+        Si la estrategia es buena, reentreno con todos los datos para predecir el futuro.
         
         Parameters
         ----------
@@ -139,10 +144,28 @@ class LSTMClass:
 
         Returns
         -------
-
+        comentario de prueba
 
         """
-        pass
+        #df_previsiones_xd
+        
+        ###################################################################
+        #self.trainX_test   # Aquí guarde 250 ultimos datos +- un año
+        
+        for i in range(LSTMClass.n_past, len(myLSTMnet.trainX_test), 1):  # vamos avanzando a saltos de longuitud muestreo
+            
+            prediction = myLSTMnet.model.predict(myLSTMnet.trainX_test[i:i+1])
+            #prediction = self.model.predict(self.trainX[0:1])
+            
+            #Perform inverse transformation to rescale back to original range
+            #Since we used 5 variables for transform, the inverse expects same dimensions
+            #Therefore, let us copy our values 5 times and discard them after inverse transform
+            prediction_copies = np.repeat(prediction, 8, axis=-1)   #df_for_training.shape[1]
+            prediction = scaler.inverse_transform(prediction_copies)[:,myLSTMnet.hull_col]
+            
+            self.df_previsiones_xd.loc[i-(LSTMClass.n_past),'X_dias']= prediction
+         
+            
    
         return
     
@@ -220,7 +243,7 @@ class LSTMClass:
         #df_for_training_scaled = df_for_training_scaled_pre[:int((len(df_for_training_scaled_pre))*p_train)] 
         #df_for_training_scaled_test = df_for_training_scaled_pre[int((len(df_for_training_scaled_pre))*p_train):]
         df_for_training_scaled = df_for_training_scaled_pre[:] 
-        df_for_training_scaled_test = df_for_training_scaled_pre[int(-250):]
+        df_for_training_scaled_test = df_for_training_scaled_pre[int(-250):]  #dejo el ultimo año para test
    
         
         # df_data = pd.DataFrame(df_for_training_scaled ,columns = ['close','hull','50','100','30'])
@@ -254,14 +277,8 @@ class LSTMClass:
             self.trainX_test.append( df_for_training_scaled_test[ i - LSTMClass.n_past : i ,  0:df_for_training.shape[1]])  #n_past filas X 5 columnas (feautures)
             #slicing: fila desde (i-n_past) hasta i///// Columna desde 0: 5 =>(df_for_training.shape[1])
             
-        """
-        #Guardo ahora los datos para el test final, llegando hasta la ultima fecha. EN el for de arriba pierdo el final
-        for i in range (LSTMClass.n_past, len(df_for_training_scaled_test) +1):
-            ## en este caso Append añade un elemento que es un array de dos dimensiones.
-            self.trainX_test( df_for_training_scaled_test[ i - LSTMClass.n_past : i ,  0:df_for_training.shape[1]])  #n_past filas X 5 columnas (feautures)
-            #slicing: fila desde (i-n_past) hasta i///// Columna desde 0: 5 =>(df_for_training.shape[1])
-        """
-        # ## separar Training y TEST
+
+        # ## separar Training y TEST  Aqui no separo porque lo hize arriba
         self.trainX, trainX_test_kk, self.trainY, self.trainY_test  = train_test_split(self.trainXX, self.trainYY, test_size = 0.001,shuffle = False)
         
         
@@ -306,7 +323,7 @@ class LSTMClass:
         self.model.summary()
 
         # fit the model
-        history = self.model.fit(self.trainX, self.trainY, epochs=12, batch_size=16, validation_split=0.15, verbose=1) #batch=16
+        history = self.model.fit(self.trainX, self.trainY, epochs=2, batch_size=16, validation_split=0.15, verbose=1) #batch=16
         
         """
         plt.title("LSTM training")
@@ -519,6 +536,11 @@ if __name__ == '__main__':
     ValueError -- Si (a == 0)
     
     """   
+
+    
+    print(sys.argv[1])   #se configura en 'run' 'configuration per file'
+    ''
+    
     print ('version: ',versionVersion) 
 
 
@@ -529,14 +551,15 @@ if __name__ == '__main__':
     
 
     for jjj in range(0,len(tickers_ibex)):    ##tickers_sp500
-    
+
+        """    
         ## Primera RED
-        myLSTMnet_1 =LSTMClass(previson_a_x_days=2)          #Creamos la clase
+        myLSTMnet_2 =LSTMClass(previson_a_x_days=2)          #Creamos la clase
         #Preparo los datos
-        myLSTMnet_1.dataPreparation_1(tickers_ibex[jjj],fechaInicio_, fechaFin_)
+        myLSTMnet_2.dataPreparation_1(tickers_ibex[jjj],fechaInicio_, fechaFin_)
         #creo y entreno la NET
-        myLSTMnet_1.LSTM_net_2()
-        
+        myLSTMnet_2.LSTM_net_2()
+        """
         
         ## Segunda RED
         myLSTMnet_5 =LSTMClass(previson_a_x_days=5)          #Creamos la clase
@@ -545,24 +568,27 @@ if __name__ == '__main__':
         #creo y entreno la NET
         myLSTMnet_5.LSTM_net_2()
      
-        
+        """
         ## Tercera RED
         myLSTMnet_12 =LSTMClass(previson_a_x_days=12)          #Creamos la clase
         #Preparo los datos
         myLSTMnet_12.dataPreparation_1(tickers_ibex[jjj],fechaInicio_, fechaFin_)
         #creo y entreno la NET
         myLSTMnet_12.LSTM_net_2()
+        """
         
         # Pinto la grafica
-        LSTMClass.plottingSecuence_prevision(myLSTMnet_1)
+        #LSTMClass.plottingSecuence_prevision(myLSTMnet_2)
         LSTMClass.plottingSecuence_prevision(myLSTMnet_5)
-        LSTMClass.plottingSecuence_prevision(myLSTMnet_12)
+        #LSTMClass.plottingSecuence_prevision(myLSTMnet_12)
+        
+        myLSTMnet_5.predicionLSTM(tickers_ibex[jjj], myLSTMnet_5)
        
         #### FECHAS
         #start =dt.datetime(2000,1,1)
         ##startD =dt.datetime.today() - dt.timedelta(days=5*250)    #un año tiene 250 sesiones.
     
-        #break  #solo hago una iteracion :-)
+        break  #solo hago una iteracion :-)
     
     print('This is it................ ')
     
@@ -585,11 +611,11 @@ else:
     instrumento_ = tickers_ibex[0]
     
     # Creo la RedNeuronal
-    myLSTMnet_1 =LSTMClass(previson_a_x_days=2)          #Creamos la clase
+    myLSTMnet_xd =LSTMClass(previson_a_x_days=2)          #Creamos la clase
     #Preparo los datos
-    myLSTMnet_1.dataPreparation_1(instrumento= instrumento_, startD=fechaInicio_, endD=fechaFin_)
+    myLSTMnet_xd.dataPreparation_1(instrumento= instrumento_, startD=fechaInicio_, endD=fechaFin_)
     #Entreno la NET
-    myLSTMnet_1.LSTM_net_2()
+    myLSTMnet_xd.LSTM_net_2()
       
     LSTMClass.plottingSecuence_prevision(myLSTMnet_1)
    
