@@ -132,7 +132,37 @@ class LSTMClass:
    
         return
     
-    def predicionLSTM(self, instrumento, myLSTMnet):
+    def estrategia_LSTM_01(self, instrumento_, startDate_, endDate_):
+        """
+        Descripcion: parto de los datos de reales y las predicciones de la LSTM, y defino una estrategia.
+        
+        Parameters
+        ----------
+        beneficio : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+
+        """
+        ##  RED
+
+        #Preparo los datos
+        self.dataPreparation_1(instrumento_,startDate_, endDate_)
+        #creo y entreno la NET
+        self.LSTM_net_2()
+     
+        # Pinto la grafica
+        #self.plottingSecuence_prevision(self)
+        
+        df_predi= self.predicionLSTM(instrumento_)
+        
+        print (fechaFin_)
+        print ('Prevision a  ', self.n_future)
+   
+        return    
+    
+    def predicionLSTM(self, instrumento):
         """
         Descripcion: Metodo para calcular una prediccion con la red entrenada
         Voy a usar para probar a estrategia los datos del ultimo año. 
@@ -148,17 +178,17 @@ class LSTMClass:
         ###################################################################
         #self.trainX_test   # Aquí guarde 250 ultimos datos +- un año
         iii=0
-        comienzo_=len(myLSTMnet.trainX_test) - 20
-        for i in range(comienzo_, len(myLSTMnet.trainX_test), 1):  # vamos avanzando a saltos de longuitud muestreo
+        comienzo_=len(self.trainX_test) - 230
+        for i in range(comienzo_, len(self.trainX_test), 1):  # vamos avanzando a saltos de longuitud muestreo
             
-            prediction = myLSTMnet.model.predict(myLSTMnet.trainX_test[i:i+1])
+            prediction = self.model.predict(self.trainX_test[i:i+1])
             #prediction = self.model.predict(self.trainX[0:1])
             
             #Perform inverse transformation to rescale back to original range
             #Since we used 5 variables for transform, the inverse expects same dimensions
             #Therefore, let us copy our values 5 times and discard them after inverse transform
             prediction_copies = np.repeat(prediction, 8, axis=-1)   #df_for_training.shape[1]
-            prediction = scaler.inverse_transform(prediction_copies)[:,myLSTMnet.hull_col]
+            prediction = scaler.inverse_transform(prediction_copies)[:,self.hull_col]
             
             self.df_previsiones_xd.loc[iii,'X_dias']= prediction
             
@@ -544,7 +574,15 @@ if __name__ == '__main__':
 
     # Determino las fechas
     fechaInicio_ = dt.datetime(2018,1,10)
-    fechaFin_ = dt.datetime.today()  - dt.timedelta(days=1)      
+    fechaFin_ = dt.datetime.today()  - dt.timedelta(days=1)    
+    
+    
+    #################### PROBAMOS LA ESTRATEGIA
+    myLSTMnet_6D =LSTMClass(6)          #Creamos la clase
+    myLSTMnet_6D.estrategia_LSTM_01( tickers_ibex[6], fechaInicio_, fechaFin_)
+    
+    
+    
 
     
 
@@ -583,12 +621,7 @@ if __name__ == '__main__':
         df_predi= myLSTMnet_5.predicionLSTM(tickers_ibex[jjj], myLSTMnet_5)
         print (fechaFin_)
         print ('Prevision a  ', myLSTMnet_5.n_future)
-    
-       
-        #### FECHAS
-        #start =dt.datetime(2000,1,1)
-        ##startD =dt.datetime.today() - dt.timedelta(days=5*250)    #un año tiene 250 sesiones.
-    
+
         break  #solo hago una iteracion :-)
     
     print('This is it................ ')
