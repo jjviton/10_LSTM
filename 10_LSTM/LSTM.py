@@ -137,22 +137,19 @@ class LSTMClass:
         Descripcion: Metodo para calcular una prediccion con la red entrenada
         Voy a usar para probar a estrategia los datos del ultimo año. 
         Si la estrategia es buena, reentreno con todos los datos para predecir el futuro.
-        
-        Parameters
-        ----------
-        beneficio : TYPE
 
         Returns
         -------
-        comentario de prueba
-
+        Devuelve un array con las ultimas previsiones, el ultimo elemento del array corresponde a la 
+        prevision de hoy con el horizonte defindo para la red LSTM
         """
         #df_previsiones_xd
         
         ###################################################################
         #self.trainX_test   # Aquí guarde 250 ultimos datos +- un año
-        
-        for i in range(LSTMClass.n_past, len(myLSTMnet.trainX_test), 1):  # vamos avanzando a saltos de longuitud muestreo
+        iii=0
+        comienzo_=len(myLSTMnet.trainX_test) - 20
+        for i in range(comienzo_, len(myLSTMnet.trainX_test), 1):  # vamos avanzando a saltos de longuitud muestreo
             
             prediction = myLSTMnet.model.predict(myLSTMnet.trainX_test[i:i+1])
             #prediction = self.model.predict(self.trainX[0:1])
@@ -163,11 +160,12 @@ class LSTMClass:
             prediction_copies = np.repeat(prediction, 8, axis=-1)   #df_for_training.shape[1]
             prediction = scaler.inverse_transform(prediction_copies)[:,myLSTMnet.hull_col]
             
-            self.df_previsiones_xd.loc[i-(LSTMClass.n_past),'X_dias']= prediction
-         
+            self.df_previsiones_xd.loc[iii,'X_dias']= prediction
+            
+            iii+=1
             
    
-        return
+        return self.df_previsiones_xd
     
     
     def dataPreparation_1(self, instrumento='san', startD=5, endD=6):
@@ -582,7 +580,10 @@ if __name__ == '__main__':
         LSTMClass.plottingSecuence_prevision(myLSTMnet_5)
         #LSTMClass.plottingSecuence_prevision(myLSTMnet_12)
         
-        myLSTMnet_5.predicionLSTM(tickers_ibex[jjj], myLSTMnet_5)
+        df_predi= myLSTMnet_5.predicionLSTM(tickers_ibex[jjj], myLSTMnet_5)
+        print (fechaFin_)
+        print ('Prevision a  ', myLSTMnet_5.n_future)
+    
        
         #### FECHAS
         #start =dt.datetime(2000,1,1)
