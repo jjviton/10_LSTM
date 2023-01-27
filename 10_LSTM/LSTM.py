@@ -168,19 +168,40 @@ class LSTMClass:
 
         plt.plot(x[:200],df_predi[-200:], color='red',label='Prediccion')
         #plt.plot(self.trainX_test[-200:,-1,self.hull_col], color='blue',label='Origen Prediccion')
+        
         df_aux9 =df_for_training['hull'].copy()
         df_aux9=df_aux9.reset_index(drop=True)  #quito los index
         df_aux9= pd.concat([df_aux9,df_gap], axis=0,ignore_index=True)
+        del df_aux9["X_dias"]
         
-        plt.plot(x[:200],df_aux9[-200:], color='lightblue',label='Origen PPrediccion')
+        plt.plot(x[:200],df_aux9[-200:], color='lightblue') #,label='Origen PPrediccion')
         plt.title(instrumento_ +" PREVISIONES a  "+ str(self.n_future) + ' dias. Con desplazam')
         plt.legend()
         plt.show()
         
+        #Guardo los excel para cotejar los datos.
+        ##quant_j.salvarExcel(df_predi, '../temp/'+instrumento_+'_predic_')
+        ##quant_j.salvarExcel(df_for_training, '../temp/'+instrumento_+'_train_')
         
+        
+        ################################################
+        #Estrategia simple: diferencia de pendientes identifican un minimo, prevision psotiva, anterior no da señal
+        ##df_signal= pd.DataFrame({'signal':range(1,200)})
+        df_signal= pd.DataFrame(columns=['signal'], index=range(200))
+        df_signal.fillna(0, inplace=True)
+        for i in range( 20, 170 ):
+            coef_Train, intercept_ =quant_j.linearRegresion_J3(df_aux9[i:i+20])
+            coef_Previ, intercept_ =quant_j.linearRegresion_J3(df_predi[i:i+20])
+            #if ((coef_Previ*coef_Train<0) and (coef_Previ>0)): #  and (df_signal.iloc[i-1] != 1)):
+                
+            if (coef_Previ*coef_Train<0) and (coef_Previ>0) and (df_signal['signal'].iloc[i-1] != 1):
+                df_signal.iloc[i]=1
+            else:
+                df_signal.iloc[i]=0
+            
         
    
-        return    
+        return df_signal
     
     def predicionLSTM(self, instrumento):
         """
@@ -585,10 +606,8 @@ if __name__ == '__main__':
     
     """   
 
-    
     print(sys.argv[1])   #se configura en 'run' 'configuration per file'
-    ''
-    
+
     print ('version: ',versionVersion) 
 
 
@@ -598,10 +617,11 @@ if __name__ == '__main__':
     
     
     #################### PROBAMOS LA ESTRATEGIA
-    myLSTMnet_6D =LSTMClass(10)          #Creamos la clase
-    myLSTMnet_6D.estrategia_LSTM_01( tickers_ibex[12], fechaInicio_, fechaFin_)
+    for jjj in range(0,len(tickers_ibex)):    ##tickers_sp500
+        myLSTMnet_6D =LSTMClass(10)          #Creamos la clase
+        df_signal= myLSTMnet_6D.estrategia_LSTM_01( tickers_ibex[jjj], fechaInicio_, fechaFin_)
     
-    
+    print('This is it................ ')
      
     """
     
