@@ -171,7 +171,6 @@ class dataGenClass:
         # Cambio el indice del Dataframe a position
         dff.set_index('position', drop=False,inplace=True, append =True)  
         
-        
         ## Calculo el dia de la semana Lunes=0
         dff['dia']=1
         dia_ =dff.columns.get_loc("dia")
@@ -183,17 +182,19 @@ class dataGenClass:
         ##fm["mv_avg_12"]= dfm["Open"].rolling(window=12).mean().shift(1)
         dff["MA_Vol"]= dff["Volume"].rolling(window=60).mean()   #.shift(1)
             
-        #Limpio columnas        
+        #Limpio columnas 
         del dff['Open']
         del dff['High']
         del dff['Low']
         del dff['Adj Close']
         del dff['position']
+        
         dff['Volume']
         #del dff['VolEMA_30']
         #del dff['DeltaVol_EMA']
         dff.dropna(inplace=True)        #quito los CEROS
        
+        #Quito el valor de Close para simplificar el trabajo de la red 
         dff['Close']=0  
        
         print(dff.head())

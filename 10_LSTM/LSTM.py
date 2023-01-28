@@ -67,6 +67,7 @@ globalVar  = True
 from sp500 import tickers_sp500
 from nasdaq import tickers_nasdaq
 from ibex import tickers_ibex
+from eurostoxx import tickers_eurostoxx
 from comodity import tickers_comodities
 
 
@@ -161,7 +162,7 @@ class LSTMClass:
         
         ## Graficar ....................................
         
-        print (fechaFin_)
+        print (endDate_)
         print ('Prevision a  ', self.n_future)
         
         x = pd.DataFrame({'Números': range(1,1000)})
@@ -615,7 +616,7 @@ if __name__ == '__main__':
     fechaInicio_ = dt.datetime(2018,1,10)
     fechaFin_ = dt.datetime.today()  - dt.timedelta(days=1)    
     
-    
+    """
     #################### PROBAMOS LA ESTRATEGIA
     for jjj in range(0,len(tickers_ibex)):    ##tickers_sp500
         myLSTMnet_6D =LSTMClass(10)          #Creamos la clase
@@ -628,14 +629,14 @@ if __name__ == '__main__':
 
     for jjj in range(0,len(tickers_ibex)):    ##tickers_sp500
 
-        ""   
+         
         ## Primera RED
         myLSTMnet_2 =LSTMClass(previson_a_x_days=2)          #Creamos la clase
         #Preparo los datos
         myLSTMnet_2.dataPreparation_1(tickers_ibex[jjj],fechaInicio_, fechaFin_)
         #creo y entreno la NET
         myLSTMnet_2.LSTM_net_2()
-        "
+        
         
         ## Segunda RED
         myLSTMnet_5 =LSTMClass(previson_a_x_days=5)          #Creamos la clase
@@ -644,28 +645,28 @@ if __name__ == '__main__':
         #creo y entreno la NET
         myLSTMnet_5.LSTM_net_2()
      
-        ""
+        
         ## Tercera RED
         myLSTMnet_12 =LSTMClass(previson_a_x_days=12)          #Creamos la clase
         #Preparo los datos
         myLSTMnet_12.dataPreparation_1(tickers_ibex[jjj],fechaInicio_, fechaFin_)
         #creo y entreno la NET
         myLSTMnet_12.LSTM_net_2()
-        "
+        
         
         # Pinto la grafica
-        #LSTMClass.plottingSecuence_prevision(myLSTMnet_2)
+        LSTMClass.plottingSecuence_prevision(myLSTMnet_2)
         LSTMClass.plottingSecuence_prevision(myLSTMnet_5)
-        #LSTMClass.plottingSecuence_prevision(myLSTMnet_12)
+        LSTMClass.plottingSecuence_prevision(myLSTMnet_12)
         
-        df_predi= myLSTMnet_5.predicionLSTM(tickers_ibex[jjj], myLSTMnet_5)
+        #df_predi= myLSTMnet_5.predicionLSTM(tickers_ibex[jjj], myLSTMnet_5)
         print (fechaFin_)
         print ('Prevision a  ', myLSTMnet_5.n_future)
 
-        break  #solo hago una iteracion :-)
+        # nte break  #solo hago una iteracion :-)
     
-    print('This is it................ ')
-    """
+    print('This is it................ 6')
+    
     
     """
     Entrada por la librería.
@@ -675,24 +676,9 @@ else:
     Esta parte del codigo se ejecuta si uso como libreria/paquete""    
     """    
     print ('formato libreria')
-    print ('version: ',versionVersion)    
+    print ('version(l): ',versionVersion)    
     
-    # Determino las fechas
-    fechaInicio_ = dt.datetime(2018,1,10)
-    fechaFin_ = dt.datetime.today()  - dt.timedelta(days=1)      
 
-    # Determino el insturmento
-    instrumento_ = tickers_ibex[0]
-    
-    # Creo la RedNeuronal
-    myLSTMnet_xd =LSTMClass(previson_a_x_days=2)          #Creamos la clase
-    #Preparo los datos
-    myLSTMnet_xd.dataPreparation_1(instrumento= instrumento_, startD=fechaInicio_, endD=fechaFin_)
-    #Entreno la NET
-    myLSTMnet_xd.LSTM_net_2()
-      
-    LSTMClass.plottingSecuence_prevision(myLSTMnet_1)
-   
     
     
     # Entreno la red
