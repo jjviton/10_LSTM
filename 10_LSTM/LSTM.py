@@ -191,7 +191,7 @@ class LSTMClass:
         df_signal= pd.DataFrame(columns=['signal'], index=range(200))
         df_signal.fillna(0, inplace=True)
         for i in range( 20, 170 ):
-            coef_Train, intercept_ =quant_j.linearRegresion_J3(df_aux9[i:i+20])
+            coef_Train, intercept_ =quant_j.linearRegresion_J3(df_aux9[i:i+40])
             coef_Previ, intercept_ =quant_j.linearRegresion_J3(df_predi[i:i+20])
             #if ((coef_Previ*coef_Train<0) and (coef_Previ>0)): #  and (df_signal.iloc[i-1] != 1)):
                 
