@@ -72,6 +72,7 @@ from comodity import tickers_comodities
 
 
 pdf_flag =True
+epochs_ =12
 
 #################################################### Clase Estrategia 
 
@@ -393,7 +394,8 @@ class LSTMClass:
         self.model.summary()
 
         # fit the model
-        history = self.model.fit(self.trainX, self.trainY, epochs=2, batch_size=16, validation_split=0.15, verbose=1) #batch=16
+        #global epochs_
+        history = self.model.fit(self.trainX, self.trainY, epochs=epochs_, batch_size=16, validation_split=0.15, verbose=1) #batch=16
         
         """
         plt.title("LSTM training")
@@ -415,17 +417,7 @@ class LSTMClass:
         #Nos vamos n_daysforPredcition atras y calculamos la precidion a n_future (6) days despues.
         
         
-        """
-        try: 
-            dff = yf.download(instrumento, startDate,endDate)
-        except:
-            logging.info('Ticker no existe'+instrumento)
-            return dff    #Irá empty
-        if dff.empty:
-            return dff
-        
-        dff=self.featured_Data(dff)
-        """
+
         
         return
 
