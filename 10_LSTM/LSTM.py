@@ -283,9 +283,12 @@ class LSTMClass:
         print (self.dfx.shape)
         
         #Variables for training
-        self.cols = list(self.dfx)[0:8]  #df.columns.tolist()
+        #self.cols = list(self.dfx)[0:8]  #df.columns.tolist()
+
+        ## PARAMETRIZAR
+        self.cols = list['Volume', 'EMA_100', 'EMA_30', 'Kalman', 'hull', 'dia', 'MA_Vol']
         #Date and volume columns are not used in training. 
-        print(self.cols) #['Open', 'High', 'Low', 'Close', 'Adj Close']
+        print(self.cols) 
 
         self.hull_col=self.dfx.columns.get_loc("hull")
         
@@ -313,7 +316,7 @@ class LSTMClass:
         #p_train = 0.80 # Porcentaje de train.
         #df_for_training_scaled = df_for_training_scaled_pre[:int((len(df_for_training_scaled_pre))*p_train)] 
         #df_for_training_scaled_test = df_for_training_scaled_pre[int((len(df_for_training_scaled_pre))*p_train):]
-        df_for_training_scaled = df_for_training_scaled_pre[:] 
+        df_for_training_scaled = df_for_training_scaled_pre[:int(-250)] 
         df_for_training_scaled_test = df_for_training_scaled_pre[int(-250):]  #dejo el ultimo año para test
    
         
@@ -619,13 +622,13 @@ if __name__ == '__main__':
     """
     
 
-    for jjj in range(0,len(tickers_ibex)):    ##tickers_sp500
+    for jjj in range(0,len(tickers_eurostoxx)):    ##tickers_sp500
 
          
         ## Primera RED
         myLSTMnet_2 =LSTMClass(previson_a_x_days=2)          #Creamos la clase
         #Preparo los datos
-        myLSTMnet_2.dataPreparation_1(tickers_ibex[jjj],fechaInicio_, fechaFin_)
+        myLSTMnet_2.dataPreparation_1(tickers_eurostoxx[jjj],fechaInicio_, fechaFin_)
         #creo y entreno la NET
         myLSTMnet_2.LSTM_net_2()
         
@@ -633,7 +636,7 @@ if __name__ == '__main__':
         ## Segunda RED
         myLSTMnet_5 =LSTMClass(previson_a_x_days=5)          #Creamos la clase
         #Preparo los datos
-        myLSTMnet_5.dataPreparation_1(tickers_ibex[jjj],fechaInicio_, fechaFin_)
+        myLSTMnet_5.dataPreparation_1(tickers_eurostoxx[jjj],fechaInicio_, fechaFin_)
         #creo y entreno la NET
         myLSTMnet_5.LSTM_net_2()
      
@@ -641,7 +644,7 @@ if __name__ == '__main__':
         ## Tercera RED
         myLSTMnet_12 =LSTMClass(previson_a_x_days=12)          #Creamos la clase
         #Preparo los datos
-        myLSTMnet_12.dataPreparation_1(tickers_ibex[jjj],fechaInicio_, fechaFin_)
+        myLSTMnet_12.dataPreparation_1(tickers_eurostoxx[jjj],fechaInicio_, fechaFin_)
         #creo y entreno la NET
         myLSTMnet_12.LSTM_net_2()
         
