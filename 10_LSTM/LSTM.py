@@ -72,7 +72,7 @@ from comodity import tickers_comodities
 
 
 pdf_flag =True
-epochs_ =12
+epochs_ =2
 
 #################################################### Clase Estrategia 
 
@@ -156,13 +156,11 @@ class LSTMClass:
         self.LSTM_net_2()
         # Pinto la grafica
         #self.plottingSecuence_prevision(self)        
-        df_predi= self.predicionLSTM(instrumento_)
-        df_gap= df1 = pd.DataFrame(columns=['X_dias'],index=range(self.n_future )) #Gap por los dias a prevision vista
-        df_predi= pd.concat([df_gap,df_predi], axis=0,ignore_index=True)
-
+        df_predi2= self.predicionLSTM(instrumento_)
+        df_gap= pd.DataFrame(columns=['X_dias'],index=range(self.n_future )) #Gap por los dias a prevision vista
+        df_predi= pd.concat([df_gap,df_predi2], axis=0,ignore_index=True)
         
-        ## Graficar ....................................
-        
+        ## Graficar ....................................        
         print (endDate_)
         print ('Prevision a  ', self.n_future)
         
@@ -176,7 +174,7 @@ class LSTMClass:
         df_aux9= pd.concat([df_aux9,df_gap], axis=0,ignore_index=True)
         del df_aux9["X_dias"]
         
-        plt.plot(x[:200],df_aux9[-200:], color='lightblue') #,label='Origen PPrediccion')
+        plt.plot(x[:200],df_aux9[-200:], color='lightblue',label='Origen PPrediccion')
         plt.title(instrumento_ +" PREVISIONES a  "+ str(self.n_future) + ' dias. Con desplazam')
         plt.legend()
         plt.show()
@@ -191,25 +189,25 @@ class LSTMClass:
         ##df_signal= pd.DataFrame({'signal':range(1,200)})
         df_signal= pd.DataFrame(columns=['signal'], index=range(200))
         df_signal.fillna(0, inplace=True)
-        for i in range( 20, 170 ):
-            coef_Train, intercept_ =quant_j.linearRegresion_J3(df_aux9[i:i+40])
-            coef_Previ, intercept_ =quant_j.linearRegresion_J3(df_predi[i:i+20])
-            #if ((coef_Previ*coef_Train<0) and (coef_Previ>0)): #  and (df_signal.iloc[i-1] != 1)):
-                
-            if (coef_Previ*coef_Train<0) and (coef_Previ>0) and (df_signal['signal'].iloc[i-1] != 1):
-                df_signal.iloc[i]=1
+        for i in range( 10, 200 ):
+            #Prediccion subiendo tres dias
+            if((df_predi2['X_dias'].iloc[i-3] < df_predi2['X_dias'].iloc[i-2]) and
+               (df_predi2['X_dias'].iloc[i-2] < df_predi2['X_dias'].iloc[i-1]) and
+               (df_predi2['X_dias'].iloc[i-1] < df_predi2['X_dias'].iloc[i-0])):
+                df_signal['signal'].iloc[i]=1
             else:
-                df_signal.iloc[i]=0
-            
-        
+                df_signal['signal'].iloc[i]=0
+                        
    
-        return df_signal
+        return df_signal, df_predi
     
-    def predicionLSTM(self, instrumento):
+    def predicionLSTM(self, instrumento, daysBack=200):
         """
         Descripcion: Metodo para calcular una prediccion con la red entrenada
         Voy a usar para probar a estrategia los datos del ultimo año. 
         Si la estrategia es buena, reentreno con todos los datos para predecir el futuro.
+        Trabajo con los datos del array reservado para test... teoricamente para cada
+        dia dado nos la la prediccion a los dias n_future definidos.
 
         Returns
         -------
@@ -221,7 +219,7 @@ class LSTMClass:
         ###################################################################
         #self.trainX_test   # Aquí guarde 250 ultimos datos +- un año
         iii=0
-        comienzo_=len(self.trainX_test) - 200
+        comienzo_=len(self.trainX_test) - daysBack
         for i in range(comienzo_, len(self.trainX_test), 1):  # vamos avanzando a saltos de longuitud muestreo
             
             prediction = self.model.predict(self.trainX_test[i:i+1])
@@ -237,7 +235,7 @@ class LSTMClass:
             
             iii+=1
             
-   
+        iii
         return self.df_previsiones_xd
     
     
@@ -418,9 +416,6 @@ class LSTMClass:
         #Pido una predcicion para un array de fechas, me devuelve la predicion para cada una
         
         #Nos vamos n_daysforPredcition atras y calculamos la precidion a n_future (6) days despues.
-        
-        
-
         
         return
 
@@ -611,15 +606,16 @@ if __name__ == '__main__':
     fechaInicio_ = dt.datetime(2018,1,10)
     fechaFin_ = dt.datetime.today()  - dt.timedelta(days=1)    
     
-    """
     #################### PROBAMOS LA ESTRATEGIA
     for jjj in range(0,len(tickers_ibex)):    ##tickers_sp500
-        myLSTMnet_6D =LSTMClass(10)          #Creamos la clase
+        myLSTMnet_6D =LSTMClass(6)          #Creamos la clase
         df_signal= myLSTMnet_6D.estrategia_LSTM_01( tickers_ibex[jjj], fechaInicio_, fechaFin_)
     
     print('This is it................ ')
-     
-    """
+    
+    
+    sys.exit()
+    
     
 
     for jjj in range(0,len(tickers_eurostoxx)):    ##tickers_sp500
