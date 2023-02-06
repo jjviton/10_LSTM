@@ -156,9 +156,10 @@ class LSTMClass:
         self.LSTM_net_2()
         # Pinto la grafica
         #self.plottingSecuence_prevision(self)        
-        df_predi2= self.predicionLSTM(instrumento_)
+        df_predi2= self.predicionLSTM(instrumento_) #predicciones del grupo de test
         df_gap= pd.DataFrame(columns=['X_dias'],index=range(self.n_future )) #Gap por los dias a prevision vista
         df_predi= pd.concat([df_gap,df_predi2], axis=0,ignore_index=True)
+        df_predi = np.array(df_predi)
         
         ## Graficar ....................................        
         print (endDate_)
@@ -187,9 +188,9 @@ class LSTMClass:
         ################################################
         #Estrategia simple: diferencia de pendientes identifican un minimo, prevision psotiva, anterior no da señal
         ##df_signal= pd.DataFrame({'signal':range(1,200)})
-        df_signal= pd.DataFrame(columns=['signal'], index=range(200))
+        df_signal= pd.DataFrame(columns=['signal'], index=range(len(self.trainX_test)))
         df_signal.fillna(0, inplace=True)
-        for i in range( 10, 200 ):
+        for i in range( 10, len(self.trainX_test) ):
             #Prediccion subiendo tres dias
             if((df_predi2['X_dias'].iloc[i-3] < df_predi2['X_dias'].iloc[i-2]) and
                (df_predi2['X_dias'].iloc[i-2] < df_predi2['X_dias'].iloc[i-1]) and
@@ -199,7 +200,7 @@ class LSTMClass:
                 df_signal['signal'].iloc[i]=0
                         
    
-        return df_signal, df_predi
+        return df_signal, df_predi2
     
     def predicionLSTM(self, instrumento, daysBack=200):
         """
@@ -219,7 +220,8 @@ class LSTMClass:
         ###################################################################
         #self.trainX_test   # Aquí guarde 250 ultimos datos +- un año
         iii=0
-        comienzo_=len(self.trainX_test) - daysBack
+        #comienzo_=len(self.trainX_test) - daysBack
+        comienzo_=0
         for i in range(comienzo_, len(self.trainX_test), 1):  # vamos avanzando a saltos de longuitud muestreo
             
             prediction = self.model.predict(self.trainX_test[i:i+1])
@@ -231,7 +233,8 @@ class LSTMClass:
             prediction_copies = np.repeat(prediction, 8, axis=-1)   #df_for_training.shape[1]
             prediction = scaler.inverse_transform(prediction_copies)[:,self.hull_col]
             
-            self.df_previsiones_xd.loc[iii,'X_dias']= prediction
+                     
+            self.df_previsiones_xd.loc[iii,'X_dias']= float(prediction)
             
             iii+=1
             
