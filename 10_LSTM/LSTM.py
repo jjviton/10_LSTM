@@ -72,7 +72,7 @@ from comodity import tickers_comodities
 
 
 pdf_flag =True
-epochs_ =2
+epochs_ =12
 
 #################################################### Clase Estrategia 
 
@@ -200,7 +200,7 @@ class LSTMClass:
                 df_signal['signal'].iloc[i]=0
                         
    
-        return df_signal, df_predi2
+        return df_signal, df_predi2, df_predi
     
     def predicionLSTM(self, instrumento, daysBack=200):
         """
