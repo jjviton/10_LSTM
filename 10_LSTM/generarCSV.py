@@ -195,7 +195,7 @@ class dataGenClass:
         dff.dropna(inplace=True)        #quito los CEROS
        
         #Quito el valor de Close para simplificar el trabajo de la red 
-        dff['Close']=0  
+        #dff['Close']=0  
        
         print(dff.head())
         ##quant_j.salvarExcelTOTEST(dff, 'telefonica_01', nombreSheet="data")  

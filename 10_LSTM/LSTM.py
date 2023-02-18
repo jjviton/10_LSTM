@@ -72,7 +72,7 @@ from comodity import tickers_comodities
 
 
 pdf_flag =True
-epochs_ =12
+epochs_ =22
 
 #################################################### Clase Estrategia 
 
@@ -103,7 +103,7 @@ class LSTMClass:
         
         self.dfx = pd.DataFrame()
         self.cols =0
-        self.hull_col =0
+        self.Y_supervised =0
 
         self.n_future=previson_a_x_days
         
@@ -168,7 +168,7 @@ class LSTMClass:
         x = pd.DataFrame({'Números': range(1,1000)})
 
         plt.plot(x[:200],df_predi[-200:], color='red',label='Prediccion')
-        #plt.plot(self.trainX_test[-200:,-1,self.hull_col], color='blue',label='Origen Prediccion')
+        #plt.plot(self.trainX_test[-200:,-1,self.Y_supervised], color='blue',label='Origen Prediccion')
         
         df_aux9 =df_for_training['hull'].copy()
         df_aux9=df_aux9.reset_index(drop=True)  #quito los index
@@ -231,7 +231,7 @@ class LSTMClass:
             #Since we used 5 variables for transform, the inverse expects same dimensions
             #Therefore, let us copy our values 5 times and discard them after inverse transform
             prediction_copies = np.repeat(prediction, 8, axis=-1)   #df_for_training.shape[1]
-            prediction = scaler.inverse_transform(prediction_copies)[:,self.hull_col]
+            prediction = scaler.inverse_transform(prediction_copies)[:,self.Y_supervised]
             
                      
             self.df_previsiones_xd.loc[iii,'X_dias']= float(prediction)
@@ -287,11 +287,11 @@ class LSTMClass:
         #self.cols = list(self.dfx)[0:8]  #df.columns.tolist()
 
         ## PARAMETRIZAR
-        self.cols = list['Volume', 'EMA_100', 'EMA_30', 'Kalman', 'hull', 'dia', 'MA_Vol']
+        self.cols = list['Volume', 'EMA_100', 'EMA_30', 'Kalman', 'hull', 'dia', 'MA_Vol', 'Close']
         #Date and volume columns are not used in training. 
         print(self.cols) 
 
-        self.hull_col=self.dfx.columns.get_loc("hull")
+        self.Y_supervised=self.dfx.columns.get_loc("Close")    #Selecciono la columna a supervisada
         
         #New dataframe with only training data - 5 columns
         global df_for_training
@@ -344,8 +344,8 @@ class LSTMClass:
             self.trainXX.append( df_for_training_scaled[ i - LSTMClass.n_past : i ,  0:df_for_training.shape[1]])  #n_past filas X 5 columnas (feautures)
             #slicing: fila desde (i-n_past) hasta i///// Columna desde 0: 5 =>(df_for_training.shape[1])
             
-            self.trainYY.append(df_for_training_scaled[i + self.n_future - 1:i + self.n_future, self.hull_col])  ##[17:18,0] un posicoin de la fila para la columna 0
-            ### el 4/hull_col es la caracteritica elegida Close//EMA//EMA100//
+            self.trainYY.append(df_for_training_scaled[i + self.n_future - 1:i + self.n_future, self.Y_supervised])  ##[17:18,0] un posicoin de la fila para la columna 0
+            ### el 4/Y_supervised es la caracteritica elegida Close//EMA//EMA100//
             
         for i in range (LSTMClass.n_past, len(df_for_training_scaled_test) +1):
             ## en este caso Append añade un elemento que es un array de dos dimensiones.
@@ -357,7 +357,7 @@ class LSTMClass:
         self.trainX, trainX_test_kk, self.trainY, self.trainY_test  = train_test_split(self.trainXX, self.trainYY, test_size = 0.001,shuffle = False)
         
         
-        # trainX_test[-1,-1, hull_col]
+        # trainX_test[-1,-1, Y_supervised]
         # trainY_test[-1]
        
         self.trainX, self.trainY = np.array(self.trainX), np.array(self.trainY)
@@ -487,16 +487,16 @@ class LSTMClass:
                 #Since we used 5 variables for transform, the inverse expects same dimensions
                 #Therefore, let us copy our values 5 times and discard them after inverse transform
                 prediction_copies = np.repeat(prediction, 8, axis=-1)   #df_for_training.shape[1]
-                prediction = scaler.inverse_transform(prediction_copies)[:,myLSTMnet.hull_col]
+                prediction = scaler.inverse_transform(prediction_copies)[:,myLSTMnet.Y_supervised]
                                 
                 
                 prediction.shape = (LSTMClass.n_past)   #me devuleve 15//n_past previsiones a 6//n_future dias vista
                 pred_gap=np.concatenate((pred_gap, prediction), axis=0)  #predcicion son n_past... en un futuro de n_futre muestras
                 pred_gap=np.concatenate((pred_gap, gapmuestras), axis=0)
             
-                ##xx=(trainX[i-n_past:i,0,hull_col])
-                xx=(myLSTMnet.trainX_test[i-LSTMClass.n_past:i,-1,myLSTMnet.hull_col])    ##yyy=trainX_test[-(n_past+n_future):,-1,hull_col]   
-                ##xx= trainXX[-1:, -n_past:, hull_col]  # coje el ultimo tramo de datos 
+                ##xx=(trainX[i-n_past:i,0,Y_supervised])
+                xx=(myLSTMnet.trainX_test[i-LSTMClass.n_past:i,-1,myLSTMnet.Y_supervised])    ##yyy=trainX_test[-(n_past+n_future):,-1,Y_supervised]   
+                ##xx= trainXX[-1:, -n_past:, Y_supervised]  # coje el ultimo tramo de datos 
                 xx.shape = ( LSTMClass.n_past)
                 muestra_gap=np.concatenate((muestra_gap, xx  ), axis=0)
                 muestra_gap=np.concatenate((muestra_gap, gapmuestras), axis=0)
@@ -512,7 +512,7 @@ class LSTMClass:
                 prediction = myLSTMnet.model.predict(myLSTMnet.trainX_test[-LSTMClass.n_past:])
                 
                 prediction_copies = np.repeat(prediction, 8, axis=-1)   #df_for_training.shape[1]
-                prediction = scaler.inverse_transform(prediction_copies)[:,myLSTMnet.hull_col]
+                prediction = scaler.inverse_transform(prediction_copies)[:,myLSTMnet.Y_supervised]
                 
                 prediction.shape = (LSTMClass.n_past)   #me devuleve 15//n_past previsiones a 6//n_future dias vista
             except:
@@ -543,18 +543,18 @@ class LSTMClass:
             #pred_gap=np.concatenate((pred_gap, prediction), axis=0)  #predcicion son n_past... en un futuro de n_futre muestras
             #pred_gap=np.concatenate((pred_gap, gapmuestras), axis=0)
            
-            #yyy=myLSTMnet.trainX_test[0:(len(myLSTMnet.trainX_test)),-1,myLSTMnet.hull_col]        ## yyy=trainXX[-1:,-n_past:,hull_col]   de todos los grupos de 14 observaciones, cojo la primero y la column 'hull' 
-            yyy=myLSTMnet.trainX_test[0:,-1,myLSTMnet.hull_col]   
+            #yyy=myLSTMnet.trainX_test[0:(len(myLSTMnet.trainX_test)),-1,myLSTMnet.Y_supervised]        ## yyy=trainXX[-1:,-n_past:,Y_supervised]   de todos los grupos de 14 observaciones, cojo la primero y la column 'hull' 
+            yyy=myLSTMnet.trainX_test[0:,-1,myLSTMnet.Y_supervised]   
             yyy_copies = np.repeat(yyy, 8, axis=-1)   #df_for_training.shape[1]
             yyy=np.reshape(yyy_copies, (len(yyy), -1))            
-            yyy = scaler.inverse_transform(yyy)[:,myLSTMnet.hull_col]   ### DESESCALAR
+            yyy = scaler.inverse_transform(yyy)[:,myLSTMnet.Y_supervised]   ### DESESCALAR
             yyy.shape = (len(yyy)) 
             plt.plot(yyy, label='datos REALES',color='pink')
             
             
             yyy_copies = np.repeat(muestra_gap, 8, axis=-1)   #df_for_training.shape[1]
             yyy=np.reshape(yyy_copies, (len(muestra_gap), -1))            
-            muestra_gap = scaler.inverse_transform(yyy)[:,myLSTMnet.hull_col]   ### DESESCALAR
+            muestra_gap = scaler.inverse_transform(yyy)[:,myLSTMnet.Y_supervised]   ### DESESCALAR
             #yyy.shape = (len(muestra_gap))             
             plt.plot(muestra_gap, color='red',label='Origen Prediccion')
             
