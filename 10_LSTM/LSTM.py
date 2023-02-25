@@ -5,6 +5,17 @@
 ******************************************************************************
 Clase que implementa una LSTM para evaluar la serie temporal de una secuencia
  de precios y mostrar la prevision calculada.
+ 
+Como objetivo tenemos entrenar una red LSTM para que descubra patrones esta-
+cionales que nos permitan hacer trading de exito.
+El proyecto 100_backtrading, permite evaluar la estrategia antes de pasar a PROD
+Luego entrenamos la red con todos los datos disponibles hasta la fecha y 
+salvamos el modelos para ponerle a operar diariamente y que nos dé señales.
+Al comienzo creo que haremos las entradas y el moneymangement a mano.
+
+Todo apunta que esta formula va a dar buenos resultados, espero no equivocarme 
+o que lo que vemos a feb-23 no sea un espejismo o fruto de una buena racha.
+ 
 ******************************************************************************
 ******************************************************************************
 
@@ -780,7 +791,8 @@ if __name__ == '__main__':
 
     print ('version(J): ',versionVersion) 
 
-
+    if (sys.argv[1]== 'train'):
+        print('entreno')
     # Determino las fechas
     fechaInicio_ = dt.datetime(2018,1,10)
     fechaFin_ = dt.datetime.today()  - dt.timedelta(days=1)    
@@ -857,7 +869,7 @@ else:
     """
     Esta parte del codigo se ejecuta si uso como libreria/paquete""    
     """    
-    print ('formato libreria')
+    print (' libreria')
     print ('version(l): ',versionVersion)    
     
 
