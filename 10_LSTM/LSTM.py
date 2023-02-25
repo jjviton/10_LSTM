@@ -72,7 +72,7 @@ from comodity import tickers_comodities
 
 
 pdf_flag =True
-epochs_ =22
+epochs_ =12
 
 #################################################### Clase Estrategia 
 
@@ -90,7 +90,7 @@ class LSTMClass:
     n_past = 14  # Number of past days we want to use to predict the future.  FILAS
     flag01 =0
    
-    def __init__(self, previson_a_x_days=1, para1=False, para2=1):
+    def __init__(self, previson_a_x_days=3, Y_supervised_ = 'hull', para1=False, para2=1):
         
         #Variable de INSTANCIA
         self.para_02 = para2   #variable de la isntancia
@@ -103,7 +103,7 @@ class LSTMClass:
         
         self.dfx = pd.DataFrame()
         self.cols =0
-        self.Y_supervised =0
+        self.Y_supervised = Y_supervised_ 
 
         self.n_future=previson_a_x_days
         
@@ -150,6 +150,7 @@ class LSTMClass:
 
         """
         ##  RED
+        
         #Preparo los datos
         self.dataPreparation_1(instrumento_,startDate_, endDate_)
         #creo y entreno la NET
@@ -192,7 +193,8 @@ class LSTMClass:
         df_signal.fillna(0, inplace=True)
         for i in range( 10, len(self.trainX_test) ):
             #Prediccion subiendo tres dias
-            if((df_predi2['X_dias'].iloc[i-3] < df_predi2['X_dias'].iloc[i-2]) and
+            if((df_predi2['X_dias'].iloc[i-4] < df_predi2['X_dias'].iloc[i-3]) and
+               (df_predi2['X_dias'].iloc[i-3] < df_predi2['X_dias'].iloc[i-2]) and
                (df_predi2['X_dias'].iloc[i-2] < df_predi2['X_dias'].iloc[i-1]) and
                (df_predi2['X_dias'].iloc[i-1] < df_predi2['X_dias'].iloc[i-0])):
                 df_signal['signal'].iloc[i]=1
@@ -230,8 +232,9 @@ class LSTMClass:
             #Perform inverse transformation to rescale back to original range
             #Since we used 5 variables for transform, the inverse expects same dimensions
             #Therefore, let us copy our values 5 times and discard them after inverse transform
-            prediction_copies = np.repeat(prediction, 8, axis=-1)   #df_for_training.shape[1]
-            prediction = scaler.inverse_transform(prediction_copies)[:,self.Y_supervised]
+            Y_supervised_num=self.dfx.columns.get_loc(self.Y_supervised)    #Selecciono la columna a supervisada
+            prediction_copies = np.repeat(prediction, 8, axis=-1)   #df_for_training.shape[1]            
+            prediction = scaler.inverse_transform(prediction_copies)[:,Y_supervised_num]  #self.Y_supervised]
             
                      
             self.df_previsiones_xd.loc[iii,'X_dias']= float(prediction)
@@ -291,7 +294,8 @@ class LSTMClass:
         #Date and volume columns are not used in training. 
         print(self.cols) 
 
-        self.Y_supervised=self.dfx.columns.get_loc("Close")    #Selecciono la columna a supervisada
+        #self.Y_supervised=self.dfx.columns.get_loc("hull")    #Selecciono la columna a supervisada
+        Y_supervised_num=self.dfx.columns.get_loc(self.Y_supervised)    #Selecciono la columna a supervisada
         
         #New dataframe with only training data - 5 columns
         global df_for_training
@@ -335,6 +339,104 @@ class LSTMClass:
         #trainX_test=[]
         
         #self.n_future = previson_a_x_days   # origina=1,   Number of days we want to look into the future based on the past days.
+
+        #Reformat input data into a shape: (n_samples x timesteps x n_features)
+        #In my example, my df_for_training_scaled has a shape (12823, 5)
+        #12823 refers to the number of data points and 5 refers to the columns (multi-variables).
+        for i in range (LSTMClass.n_past, len(df_for_training_scaled) - self.n_future +1):
+            ## en este caso Append añade un elemento que es un array de dos dimensiones.
+            self.trainXX.append( df_for_training_scaled[ i - LSTMClass.n_past : i ,  0:df_for_training.shape[1]])  #n_past filas X 5 columnas (feautures)
+            #slicing: fila desde (i-n_past) hasta i///// Columna desde 0: 5 =>(df_for_training.shape[1])
+            
+            self.trainYY.append(df_for_training_scaled[i + self.n_future - 1:i + self.n_future, Y_supervised_num])  ##[17:18,0] un posicoin de la fila para la columna 0
+            ### el 4/Y_supervised es la caracteritica elegida Close//EMA//EMA100//
+            
+        for i in range (LSTMClass.n_past, len(df_for_training_scaled_test) +1):
+            ## en este caso Append añade un elemento que es un array de dos dimensiones.
+            self.trainX_test.append( df_for_training_scaled_test[ i - LSTMClass.n_past : i ,  0:df_for_training.shape[1]])  #n_past filas X 5 columnas (feautures)
+            #slicing: fila desde (i-n_past) hasta i///// Columna desde 0: 5 =>(df_for_training.shape[1])
+            
+
+        # ## separar Training y TEST  Aqui no separo porque lo hize arriba
+        self.trainX, trainX_test_kk, self.trainY, self.trainY_test  = train_test_split(self.trainXX, self.trainYY, test_size = 0.001,shuffle = False)
+        
+        
+        # trainX_test[-1,-1, Y_supervised]
+        # trainY_test[-1]
+       
+        self.trainX, self.trainY = np.array(self.trainX), np.array(self.trainY)
+        self.trainX_test, self.trainY_test = np.array(self.trainX_test), np.array(self.trainY_test)
+        
+        print('trainX shape == {}.'.format(self.trainX.shape))
+        print('trainY shape == {}.'.format(self.trainY.shape))
+        print('trainX_test shape == {}.'.format(self.trainX_test.shape))
+        
+        """
+        tenemos un array de 238 elementos en el que cada elemento es un array de 14x5
+        """
+
+        return
+
+
+    def dataPreparation_PROD(self, instrumento='san', startD=5, endD=6):
+        """
+        Descripcion: Data preparation for LSTM training and prediction
+        
+        Parameters
+        ----------
+        beneficio : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+        """        
+
+        self.instrumento = instrumento
+        print(self.instrumento)
+        
+        mycsv = fileCSV.dataGenClass()    #Creamos la clase
+        self.dfx=mycsv.creaCSV_01(instrumento, startD, endD)
+        
+        if self.dfx.empty:   #Error en la recogida de datos
+            logging.info('No existe  {}'.format(instrumento))
+            #continue
+            return
+
+        ## PARAMETRIZAR
+        self.cols = list['Volume', 'EMA_100', 'EMA_30', 'Kalman', 'hull', 'dia', 'MA_Vol', 'Close']
+        #Date and volume columns are not used in training. 
+        print(self.cols) 
+
+        self.Y_supervised=self.dfx.columns.get_loc("hull")    #Selecciono la columna a supervisada
+        
+        #New dataframe with only training data - 5 columns
+        global df_for_training
+        df_for_training=self.dfx[self.cols].astype(float)
+        
+        #LSTM uses sigmoid and tanh that are sensitive to magnitude so values need to be normalized
+        # normalize the dataset
+        #Estándariza los datos eliminando la media y escalando los datos de forma que su varianza sea igual a 1.
+   
+        global scaler 
+        scaler = StandardScaler()
+        scaler = scaler.fit(df_for_training)
+        df_for_training_scaled_pre = scaler.transform(df_for_training)
+        
+         
+        # En esta preparacion de datos uso toda la serie sin dejar datos para test
+        # pretendo entrenar la red y guardarla en un fichero para usarla en PROD
+
+        df_for_training_scaled = df_for_training_scaled_pre[:int(-5)] 
+        df_for_training_scaled_test = df_for_training_scaled_pre[int(-5):]  #dejo el ultimo año para test
+   
+        
+        # df_data = pd.DataFrame(df_for_training_scaled ,columns = ['close','hull','50','100','30'])
+        # df_data.to_excel("telefonica_scaled.xlsx", 
+        #           index=True,
+        #           sheet_name="data")
+
+        #As required for LSTM networks, we require to reshape an input data into n_samples x timesteps x n_features. 
+        #In this example, the n_features is 5. We will make timesteps = 14 (past days data used for training). 
 
         #Reformat input data into a shape: (n_samples x timesteps x n_features)
         #In my example, my df_for_training_scaled has a shape (12823, 5)
@@ -421,6 +523,80 @@ class LSTMClass:
         #Nos vamos n_daysforPredcition atras y calculamos la precidion a n_future (6) days despues.
         
         return
+
+    def LSTM_net_2_PROD (self, instrumento_, parametro1=1, parametro2=2, parametro3=3):
+        """
+        Descripcion: esta funcion toma los datos entrena la red y la guarda en disco
+        
+        Parameters
+        ----------
+        beneficio : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+        """
+        # define the Autoencoder model
+        
+        self.model = Sequential()
+        self.model.add(LSTM(256, activation='relu', input_shape=(self.trainX.shape[1], self.trainX.shape[2]), return_sequences=True)) #64
+        self.model.add(LSTM(128, activation='relu', return_sequences=False))   #32
+        self.model.add(Dropout(0.2))
+        self.model.add(Dense(self.trainY.shape[1]))
+        
+        self.model.compile(optimizer='adam', loss='mse')
+        self.model.summary()
+
+        # fit the model
+        #global epochs_
+        history = self.model.fit(self.trainX, self.trainY, epochs=epochs_, batch_size=16, validation_split=0.15, verbose=1) #batch=16
+        
+        
+        plt.title("LSTM training")
+        plt.plot(history.history['loss'], label='Training loss')
+        plt.plot(history.history['val_loss'], label='Validation loss')
+        plt.legend()
+        plt.show()        
+        
+        #logging.debug('Add: {} + {} = {}'.format(num_1, num_2, add_result))
+        logging.info('Loss: {}'.format(self.n_future))      
+        
+        #Predicting...
+        prediction = self.model.predict(self.trainX[0:1])
+        #prediction = model.predict(trainX[-n_days_for_prediction:]) #shape = (n, 1) where n is the n_days_for_prediction
+                                                                    # desde -n hasta el final. Cada elemento es un array bidimensional
+        #Pido una predcicion para un array de fechas, me devuelve la predicion para cada una   
+        #Nos vamos n_daysforPredcition atras y calculamos la precidion a n_future (6) days despues.
+        
+        #GUARDO EL MODELO PARA ESTE INSTRUMENTO
+        self.model.save("../models/mod_"+str(self.n_future)+"d_"+instrumento_)
+                
+        return
+ 
+    def train_and_save(self, instrumento_, startDate_, endDate_):
+       """
+       Descripcion: parto de los datos de reales y las predicciones de la LSTM, y defino una estrategia.
+       Atencion que desplazo en array de previsiones para que coincida el una misma vertical el valor real con la prevision
+       
+       
+       Parameters
+       ----------
+       beneficio : TYPE
+           DESCRIPTION.
+
+       Returns
+       -------
+
+       """
+       ##  RED
+       #Preparo los datos
+       self.dataPreparation_PROD(instrumento_,startDate_, endDate_)
+       #creo y entreno la NET
+       self.LSTM_net_2_PROD(instrumento_)
+                             
+  
+       return 
+    
 
 
     def plottingSecuence_prevision(myLSTMnet):
@@ -602,16 +778,27 @@ if __name__ == '__main__':
 
     print(sys.argv[1])   #se configura en 'run' 'configuration per file'
 
-    print ('version: ',versionVersion) 
+    print ('version(J): ',versionVersion) 
 
 
     # Determino las fechas
     fechaInicio_ = dt.datetime(2018,1,10)
     fechaFin_ = dt.datetime.today()  - dt.timedelta(days=1)    
     
+    
+    ####################################### Entreno la RED y la guardo
+    myLSTMnet_ =LSTMClass(4, Y_supervised_ = 'hull')          #Creamos la clase
+    
+    myLSTMnet_.train_and_save(tickers_ibex[4], fechaInicio_, fechaFin_)
+    print (fechaFin_)
+    print ('Prevision a  ', myLSTMnet_.n_future)
+    print ('Prevision a  ', myLSTMnet_.Y_supervised )
+    
+    sys.exit()
+    
     #################### PROBAMOS LA ESTRATEGIA
     for jjj in range(0,len(tickers_ibex)):    ##tickers_sp500
-        myLSTMnet_6D =LSTMClass(6)          #Creamos la clase
+        myLSTMnet_6D =LSTMClass(6, Y_supervised_ = 'hull')          #Creamos la clase
         df_signal= myLSTMnet_6D.estrategia_LSTM_01( tickers_ibex[jjj], fechaInicio_, fechaFin_)
     
     print('This is it................ ')
@@ -625,7 +812,7 @@ if __name__ == '__main__':
 
          
         ## Primera RED
-        myLSTMnet_2 =LSTMClass(previson_a_x_days=2)          #Creamos la clase
+        myLSTMnet_2 =LSTMClass(previson_a_x_days=2, Y_supervised_ = 'hull')          #Creamos la clase
         #Preparo los datos
         myLSTMnet_2.dataPreparation_1(tickers_eurostoxx[jjj],fechaInicio_, fechaFin_)
         #creo y entreno la NET
@@ -633,7 +820,7 @@ if __name__ == '__main__':
         
         
         ## Segunda RED
-        myLSTMnet_5 =LSTMClass(previson_a_x_days=5)          #Creamos la clase
+        myLSTMnet_5 =LSTMClass(previson_a_x_days=5,Y_supervised_ = 'hull')          #Creamos la clase
         #Preparo los datos
         myLSTMnet_5.dataPreparation_1(tickers_eurostoxx[jjj],fechaInicio_, fechaFin_)
         #creo y entreno la NET
@@ -641,7 +828,7 @@ if __name__ == '__main__':
      
         
         ## Tercera RED
-        myLSTMnet_12 =LSTMClass(previson_a_x_days=12)          #Creamos la clase
+        myLSTMnet_12 =LSTMClass(previson_a_x_days=12, Y_supervised_ = 'hull')          #Creamos la clase
         #Preparo los datos
         myLSTMnet_12.dataPreparation_1(tickers_eurostoxx[jjj],fechaInicio_, fechaFin_)
         #creo y entreno la NET
@@ -656,6 +843,7 @@ if __name__ == '__main__':
         #df_predi= myLSTMnet_5.predicionLSTM(tickers_ibex[jjj], myLSTMnet_5)
         print (fechaFin_)
         print ('Prevision a  ', myLSTMnet_5.n_future)
+        print ('Prevision a  ', myLSTMnet_5.Y_supervised )
 
         # nte break  #solo hago una iteracion :-)
     
