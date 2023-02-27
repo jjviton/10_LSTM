@@ -86,7 +86,7 @@ from comodity import tickers_comodities
 
 
 pdf_flag =True
-epochs_ =12
+epochs_ =22
 
 #################################################### Clase Estrategia 
 

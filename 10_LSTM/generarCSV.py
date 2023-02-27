@@ -198,7 +198,7 @@ class dataGenClass:
         #dff['Close']=0  
        
         print(dff.head())
-        ##quant_j.salvarExcelTOTEST(dff, 'telefonica_01', nombreSheet="data")  
+        #quant_j.salvarExcelTOTEST(dff, self.instrumento, nombreSheet="data")  
         
         return dff
 
