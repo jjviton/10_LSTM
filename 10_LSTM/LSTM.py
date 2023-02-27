@@ -51,6 +51,9 @@ from matplotlib import pyplot as plt
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split 
 
+
+import tensorflow as tf
+
 #Import trading
 from pykalman import KalmanFilter
 
@@ -306,12 +309,15 @@ class LSTMClass:
         print(self.cols) 
 
         #self.Y_supervised=self.dfx.columns.get_loc("hull")    #Selecciono la columna a supervisada
-        Y_supervised_num=self.dfx.columns.get_loc(self.Y_supervised)    #Selecciono la columna a supervisada
+        #Y_supervised_num=self.dfx.columns.get_loc(self.Y_supervised)    #Selecciono la columna a supervisada
         
         #New dataframe with only training data - 5 columns
         global df_for_training
         df_for_training=self.dfx[self.cols].astype(float)
         #df_for_training_scaled_pre= self.dfx[self.cols].astype(float)
+        
+        Y_supervised_num=df_for_training.columns.get_loc(self.Y_supervised) 
+    
         
         #df_for_plot=df_for_training.tail(500)
         ##j df_for_plot.plot.line()
@@ -401,7 +407,12 @@ class LSTMClass:
         Returns
         -------
         """        
-
+        
+        #startD = dt.datetime(2018,1,10)
+        #endD= dt.datetime.today()  - dt.timedelta(days=1)        #Quito hoy para no ver el valor al ejecutar antes del cierre
+        #end = '2021-9-19'
+        
+        #instrumento = tickers_nasdaq[jjj]  ##'TEF.MC'
         self.instrumento = instrumento
         print(self.instrumento)
         
@@ -413,16 +424,41 @@ class LSTMClass:
             #continue
             return
 
+        # #Read the csv file
+        # #df = pd.read_csv('GE.csv')
+        # df= pd.read_csv('telefonica_01.csv')    ### 'rovi_05.csv''zara_02.csv'telefonica_01.csv
+        # print(df.tail()) #7 columns, including the Date. 
+        # 
+        
+        # #Separate dates for future plotting
+        # train_dates = pd.to_datetime(df['Date'])
+        # print(train_dates.tail(5)) #Check last few dates. 
+  
+        print (self.dfx.shape)
+        
+        #Variables for training
+        #self.cols = list(self.dfx)[0:8]  #df.columns.tolist()
+
         ## PARAMETRIZAR
         self.cols = list['Volume', 'EMA_100', 'EMA_30', 'Kalman', 'hull', 'dia', 'MA_Vol', 'Close']
         #Date and volume columns are not used in training. 
         print(self.cols) 
 
-        self.Y_supervised=self.dfx.columns.get_loc("hull")    #Selecciono la columna a supervisada
         
         #New dataframe with only training data - 5 columns
         global df_for_training
         df_for_training=self.dfx[self.cols].astype(float)
+        #df_for_training_scaled_pre= self.dfx[self.cols].astype(float)
+ 
+        
+        #self.Y_supervised=self.dfx.columns.get_loc("hull")    #Selecciono la columna a supervisada
+        #Y_supervised_num=self.dfx.columns.get_loc(self.Y_supervised)    #Selecciono la columna a supervisada
+        Y_supervised_num=df_for_training.columns.get_loc(self.Y_supervised) 
+    
+        #df_for_plot=df_for_training.tail(500)
+        ##j df_for_plot.plot.line()
+        
+        ### ESTUDIA como funciona este tema del scaler... deberia ser entre 0 y 1, no?
         
         #LSTM uses sigmoid and tanh that are sensitive to magnitude so values need to be normalized
         # normalize the dataset
@@ -434,11 +470,12 @@ class LSTMClass:
         df_for_training_scaled_pre = scaler.transform(df_for_training)
         
          
-        # En esta preparacion de datos uso toda la serie sin dejar datos para test
-        # pretendo entrenar la red y guardarla en un fichero para usarla en PROD
-
-        df_for_training_scaled = df_for_training_scaled_pre[:int(-5)] 
-        df_for_training_scaled_test = df_for_training_scaled_pre[int(-5):]  #dejo el ultimo año para test
+        #Divido antes de prepararlos para no perder los  ultimos datos de test al hacer la preparacion supervidada
+        #p_train = 0.80 # Porcentaje de train.
+        #df_for_training_scaled = df_for_training_scaled_pre[:int((len(df_for_training_scaled_pre))*p_train)] 
+        #df_for_training_scaled_test = df_for_training_scaled_pre[int((len(df_for_training_scaled_pre))*p_train):]
+        df_for_training_scaled = df_for_training_scaled_pre[:] 
+        df_for_training_scaled_test = df_for_training_scaled_pre[int(-50):]  # En produccion no dejo nada para test.
    
         
         # df_data = pd.DataFrame(df_for_training_scaled ,columns = ['close','hull','50','100','30'])
@@ -448,6 +485,13 @@ class LSTMClass:
 
         #As required for LSTM networks, we require to reshape an input data into n_samples x timesteps x n_features. 
         #In this example, the n_features is 5. We will make timesteps = 14 (past days data used for training). 
+        
+        #Empty lists to be populated using formatted training data
+        #trainXX = []
+        #trainYY = []
+        #trainX_test=[]
+        
+        #self.n_future = previson_a_x_days   # origina=1,   Number of days we want to look into the future based on the past days.
 
         #Reformat input data into a shape: (n_samples x timesteps x n_features)
         #In my example, my df_for_training_scaled has a shape (12823, 5)
@@ -457,7 +501,7 @@ class LSTMClass:
             self.trainXX.append( df_for_training_scaled[ i - LSTMClass.n_past : i ,  0:df_for_training.shape[1]])  #n_past filas X 5 columnas (feautures)
             #slicing: fila desde (i-n_past) hasta i///// Columna desde 0: 5 =>(df_for_training.shape[1])
             
-            self.trainYY.append(df_for_training_scaled[i + self.n_future - 1:i + self.n_future, self.Y_supervised])  ##[17:18,0] un posicoin de la fila para la columna 0
+            self.trainYY.append(df_for_training_scaled[i + self.n_future - 1:i + self.n_future, Y_supervised_num])  ##[17:18,0] un posicoin de la fila para la columna 0
             ### el 4/Y_supervised es la caracteritica elegida Close//EMA//EMA100//
             
         for i in range (LSTMClass.n_past, len(df_for_training_scaled_test) +1):
@@ -483,7 +527,6 @@ class LSTMClass:
         """
         tenemos un array de 238 elementos en el que cada elemento es un array de 14x5
         """
-
         return
 
     
@@ -791,22 +834,49 @@ if __name__ == '__main__':
 
     print ('version(J): ',versionVersion) 
 
-    if (sys.argv[1]== 'train'):
-        print('entreno')
-    # Determino las fechas
-    fechaInicio_ = dt.datetime(2018,1,10)
-    fechaFin_ = dt.datetime.today()  - dt.timedelta(days=1)    
+    if (False and sys.argv[1]== 'train'):
+        print('Train & Save')
+        # Determino las fechas
+        fechaInicio_ = dt.datetime(2008,1,10)
+        fechaFin_ = dt.datetime.today()  - dt.timedelta(days=1)    
+        
+        
+        ####################################### Entreno la RED y la guardo
+        myLSTMnet_ = LSTMClass(previson_a_x_days=4, Y_supervised_ = 'hull')          #Creamos la clase
+        myLSTMnet_.train_and_save(tickers_ibex[6], fechaInicio_, fechaFin_)
+        print (fechaFin_)
+        print ('Dias de prevision  ', myLSTMnet_.n_future)
+        print ('Variable objetivo  ', myLSTMnet_.Y_supervised )
+        print ('Instrumento        ', myLSTMnet_.instrumento )
+        
+        sys.exit()
     
-    
-    ####################################### Entreno la RED y la guardo
-    myLSTMnet_ =LSTMClass(4, Y_supervised_ = 'hull')          #Creamos la clase
-    
-    myLSTMnet_.train_and_save(tickers_ibex[4], fechaInicio_, fechaFin_)
-    print (fechaFin_)
-    print ('Prevision a  ', myLSTMnet_.n_future)
-    print ('Prevision a  ', myLSTMnet_.Y_supervised )
-    
-    sys.exit()
+    if (True or sys.argv[1]== 'prod' ):
+        print('Produccion')
+
+        instrumento_ = sys.argv[2]        
+        #Recuepro el modelos entrenado       
+        #instrumento_ = tickers_ibex[6]
+        n_future = 4
+        new_model = tf.keras.models.load_model("../models/mod_"+str(n_future)+"d_"+instrumento_)
+
+                
+        
+        # Determino las fechas
+        fechaInicio_ = dt.datetime(2008,1,10)
+        fechaFin_ = dt.datetime.today()  - dt.timedelta(days=1)    
+        
+        
+        ####################################### Entreno la RED y la guardo
+        myLSTMnet_ = LSTMClass(previson_a_x_days=4, Y_supervised_ = 'hull')          #Creamos la clase
+        myLSTMnet_.train_and_save(tickers_ibex[6], fechaInicio_, fechaFin_)
+        print (fechaFin_)
+        print ('Dias de prevision  ', myLSTMnet_.n_future)
+        print ('Variable objetivo  ', myLSTMnet_.Y_supervised )
+        print ('Instrumento        ', myLSTMnet_.instrumento )
+        
+        sys.exit()
+
     
     #################### PROBAMOS LA ESTRATEGIA
     for jjj in range(0,len(tickers_ibex)):    ##tickers_sp500
@@ -856,6 +926,7 @@ if __name__ == '__main__':
         print (fechaFin_)
         print ('Prevision a  ', myLSTMnet_5.n_future)
         print ('Prevision a  ', myLSTMnet_5.Y_supervised )
+        print ('Instrumento  ', myLSTMnet_5.instrumento )
 
         # nte break  #solo hago una iteracion :-)
     
